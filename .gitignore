@@ -48,4 +48,3 @@ db.sqlite3-journal
 *.swp
 *.swo
 *~
-.DS_Store
