@@ -3,9 +3,6 @@
 .env.local
 .env.*.local
 
-# macOS
-.DS_Store
-
 # Python
 __pycache__/
 *.py[cod]
@@ -48,3 +45,4 @@ db.sqlite3-journal
 *.swp
 *.swo
 *~
+.DS_Store
