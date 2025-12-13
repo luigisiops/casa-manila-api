@@ -1,6 +1,6 @@
 # Casa Manila API
 
-A Django REST Framework API for managing food items with PostgreSQL database and Docker support.
+A Django REST Framework API for managing casa manila food orders with PostgreSQL database and Docker support.
 
 ## Prerequisites
 
@@ -27,8 +27,8 @@ SECRET_KEY=your-secret-key-here
 DEBUG=False
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-DB_NAME=casa_manila
-DB_USER=casa_manila
+DB_NAME=db-name
+DB_USER=db-user
 DB_PASSWORD=your-secure-password
 DB_HOST=postgres
 DB_PORT=5432
@@ -59,6 +59,17 @@ docker compose exec django python manage.py createsuperuser
 
 ### Run migrations
 ```bash
+docker compose exec django python manage.py migrate
+```
+
+### Create database migrations
+```bash
+docker compose exec django python manage.py makemigrations
+```
+
+### Create migrations and apply them
+```bash
+docker compose exec django python manage.py makemigrations
 docker compose exec django python manage.py migrate
 ```
 
@@ -116,11 +127,11 @@ casa-manila-api/
 ## API Endpoints
 
 ### Food Items
-- `GET /api/food-items/` - List all food items
+- `GET /api/food-items/` - List all active food items
 - `POST /api/food-items/` - Create a new food item
 - `GET /api/food-items/{id}/` - Get a specific food item
 - `PUT /api/food-items/{id}/` - Update a food item
-- `DELETE /api/food-items/{id}/` - Delete a food item
+- `DELETE /api/food-items/{id}/` - Archive a food item (soft delete, sets is_active=False)
 
 ## Development
 
