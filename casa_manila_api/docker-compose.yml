@@ -1,0 +1,33 @@
+services:
+  django:
+    build: .
+    container_name: casa_manila_api
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app
+    restart: always
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: casa_manila_db
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ 
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data: 
