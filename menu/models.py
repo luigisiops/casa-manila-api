@@ -9,7 +9,7 @@ class FoodItem(models.Model):
     is_active = models.BooleanField(default=True)
     # TODO: Implement Soft-delete as deleted_at
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)      
+    updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         ordering = ["name"]
 
@@ -32,6 +32,7 @@ class ItemOrder(models.Model):
     quantity = models.IntegerField(
         default=1, null=False, blank=False, validators=[MinValueValidator(1)]
     )
+    # TODO: Add line_total where value is (quantity * item price)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
