@@ -110,7 +110,7 @@ casa-manila-api/
 │   ├── urls.py             # Main URL routes
 │   ├── wsgi.py
 │   └── asgi.py
-├── food_item/              # Django app
+├── menu/              # Django app
 │   ├── models.py           # Database models
 │   ├── views.py            # API views
 │   ├── serializers.py      # DRF serializers
