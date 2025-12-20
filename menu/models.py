@@ -25,6 +25,8 @@ class Order(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["pickup_datetime"]
 
 class ItemOrder(models.Model):
     order_id = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="item_orders")
@@ -36,3 +38,5 @@ class ItemOrder(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        ordering = ["created_at"]
