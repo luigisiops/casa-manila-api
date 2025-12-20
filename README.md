@@ -133,6 +133,20 @@ casa-manila-api/
 - `PUT /api/food-items/{id}/` - Update a food item
 - `DELETE /api/food-items/{id}/` - Archive a food item (soft delete, sets is_active=False)
 
+### Item Orders
+- `GET /api/item-orders/` - List all item orders
+- `POST /api/item-orders/` - Create a new item order
+- `GET /api/item-orders/{id}/` - Get a specific item order
+- `PUT /api/item-orders/{id}/` - Update an item order
+- `DELETE /api/item-orders/{id}/` - Delete an item order
+
+### Orders
+- `GET /api/orders/` - List all orders
+- `POST /api/orders/` - Create a new order
+- `GET /api/orders/{id}/` - Get a specific order
+- `PUT /api/orders/{id}/` - Update an order
+- `DELETE /api/orders/{id}/` - Delete an order
+
 ## Development
 
 ### Adding new dependencies
