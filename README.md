@@ -135,17 +135,38 @@ casa-manila-api/
 
 ### Item Orders
 - `GET /api/item-orders/` - List all item orders
-- `POST /api/item-orders/` - Create a new item order
 - `GET /api/item-orders/{id}/` - Get a specific item order
-- `PUT /api/item-orders/{id}/` - Update an item order
-- `DELETE /api/item-orders/{id}/` - Delete an item order
+
+**Note**: Item orders can only be created through the Orders endpoint. They cannot be created directly.
 
 ### Orders
 - `GET /api/orders/` - List all orders
-- `POST /api/orders/` - Create a new order
+- `POST /api/orders/` - Create a new order with nested item orders
 - `GET /api/orders/{id}/` - Get a specific order
 - `PUT /api/orders/{id}/` - Update an order
-- `DELETE /api/orders/{id}/` - Delete an order
+- `DELETE /api/orders/{id}/` - Archive an order (soft delete, sets is_active=False)
+
+#### Creating an Order with Items
+```json
+{
+  "pickup_datetime": "2026-01-15T14:30:00Z",
+  "customer_name": "John Doe",
+  "email": "john@example.com",
+  "phone_number": "555-1234",
+  "total_cost": "25.50",
+  "store_id": "location-1",
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 2
+    },
+    {
+      "item_id": 3,
+      "quantity": 1
+    }
+  ]
+}
+```
 
 ## Development
 
