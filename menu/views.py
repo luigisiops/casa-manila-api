@@ -20,21 +20,13 @@ class FoodItemViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
-class ItemOrderViewSet(viewsets.ModelViewSet):
+class ItemOrderViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only viewset for ItemOrders.
+    ItemOrders can only be created through the Order endpoint.
+    """
     queryset = ItemOrder.objects.all()
     serializer_class = ItemOrderSerializer
-
-    def destroy(self, request, *args, **kwargs):
-        """
-        Archives the item order by marking it as inactive.
-        """
-        instance = self.get_object()
-        instance.is_active = False
-        instance.save()
-        return Response(
-            {'detail': 'Item archived successfully'},
-            status=status.HTTP_200_OK
-        )
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
