@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import FoodItem, ItemOrder, Order
@@ -34,12 +35,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """
-        Archives the order by marking it as inactive.
+        Archives the order by marking it and its item orders as inactive.
         """
-        instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        with transaction.atomic():
+            instance = self.get_object()
+            instance.is_active = False
+            instance.save(update_fields=["is_active"])
+            instance.item_orders.update(is_active=False)
         return Response(
-            {'detail': 'Item archived successfully'},
+            {'detail': 'Order and item orders archived successfully'},
             status=status.HTTP_200_OK
         )
