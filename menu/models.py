@@ -16,7 +16,7 @@ class FoodItem(models.Model):
 class Order(models.Model):
     pickup_datetime = models.DateTimeField(null=False, blank=False, db_index=True)
     customer_name = models.CharField(max_length=50, null=False, blank=False)
-    email = models.CharField(max_length=50)
+    email = models.CharField(max_length=50, blank=True, null=True)
     phone_number = models.CharField(max_length=15)
     total_cost = models.DecimalField(max_digits=6, decimal_places=2)
     store_id = models.CharField(max_length=20, help_text="One of two possible locations")
