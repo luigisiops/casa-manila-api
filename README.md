@@ -183,9 +183,26 @@ docker compose up -d
 ```
 
 ### Running tests
+
+To run all tests
 ```bash
-docker compose exec django python manage.py test
+docker compose exec django python manage.py test menu
 ```
+
+To run specific tests
+```bash
+docker compose exec django python manage.py test menu.tests.FoodItemViewSetTestCase
+docker compose exec django python manage.py test menu.tests.OrderViewSetTestCase
+```
+
+The tests cover:
+- Active/inactive filtering for FoodItems
+- Soft delete behavior
+- ItemOrder read-only enforcement
+- Order creation with items and subtotal calculation
+- Order deletion cascading to ItemOrders
+- Search filtering by date and phone
+- Model-level line_total and subtotal calculations
 
 ## Environment Variables
 
