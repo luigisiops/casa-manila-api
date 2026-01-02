@@ -7,9 +7,24 @@ from .models import FoodItem, ItemOrder, Order
 from .serializers import FoodItemSerializer, ItemOrderSerializer, OrderSerializer
 
 
-class FoodItemViewSet(viewsets.ModelViewSet):
+class ActiveFilterMixin:
+    """Helper to default list endpoints to active records unless opted out."""
+
+    def filter_active(self, qs):
+        include_inactive = self.request.query_params.get("include_inactive")
+        include_inactive = str(include_inactive).lower() in {"1", "true", "yes"}
+        if not include_inactive:
+            qs = qs.filter(is_active=True)
+        return qs
+
+
+class FoodItemViewSet(ActiveFilterMixin, viewsets.ModelViewSet):
     queryset = FoodItem.objects.all()
     serializer_class = FoodItemSerializer
+
+    def get_queryset(self):
+        """Default to active items; allow include_inactive override."""
+        return self.filter_active(super().get_queryset())
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -23,7 +38,7 @@ class FoodItemViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
-class ItemOrderViewSet(viewsets.ReadOnlyModelViewSet):
+class ItemOrderViewSet(ActiveFilterMixin, viewsets.ReadOnlyModelViewSet):
     """
     Read-only viewset for ItemOrders.
     ItemOrders can only be created through the Order endpoint.
@@ -31,13 +46,17 @@ class ItemOrderViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ItemOrder.objects.all()
     serializer_class = ItemOrderSerializer
 
-class OrderViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        """Default to active item-orders; allow include_inactive override."""
+        return self.filter_active(super().get_queryset())
+
+class OrderViewSet(ActiveFilterMixin, viewsets.ModelViewSet):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        """Allow filtering by pickup date and/or phone number via query params."""
-        qs = super().get_queryset()
+        """Allow filtering by pickup date/phone; default to active orders only."""
+        qs = self.filter_active(super().get_queryset())
         params = self.request.query_params
 
         pickup_date = params.get("pickup_date")
