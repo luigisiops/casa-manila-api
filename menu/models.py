@@ -18,13 +18,24 @@ class Order(models.Model):
     customer_name = models.CharField(max_length=50, null=False, blank=False)
     email = models.CharField(max_length=50, blank=True, null=True)
     phone_number = models.CharField(max_length=15)
-    total_cost = models.DecimalField(max_digits=6, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     store_id = models.CharField(max_length=20, help_text="One of two possible locations")
     # TODO: add Status ENUM with (Active, Completed, Cancelled)
     is_completed = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def calculate_subtotal(self):
+        """Calculate and update subtotal from related item orders."""
+        self.subtotal = sum(item.line_total for item in self.item_orders.all())
+    
+    def save(self, *args, **kwargs):
+        # Skip calculation on creation (no items exist yet)
+        if self.pk:
+            self.calculate_subtotal()
+        super().save(*args, **kwargs)
+    
     class Meta:
         ordering = ["pickup_datetime"]
 
@@ -34,9 +45,14 @@ class ItemOrder(models.Model):
     quantity = models.IntegerField(
         default=1, null=False, blank=False, validators=[MinValueValidator(1)]
     )
-    # TODO: Add line_total where value is (quantity * item price)
+    line_total = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        self.line_total = self.quantity * self.item_id.price
+        super().save(*args, **kwargs)
+    
     class Meta:
         ordering = ["created_at"]

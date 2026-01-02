@@ -12,8 +12,8 @@ class ItemOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemOrder
-        fields = ['id', 'order_id', 'food_item', 'item_id', 'quantity', 'is_active']
-        read_only_fields = ['id', 'order_id']
+        fields = ['id', 'order_id', 'food_item', 'item_id', 'quantity', 'line_total', 'is_active']
+        read_only_fields = ['id', 'order_id', 'line_total']
 
 class OrderSerializer(serializers.ModelSerializer):
     item_orders = ItemOrderSerializer(many=True, read_only=True)
@@ -26,10 +26,10 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'pickup_datetime', 'customer_name', 'email', 'phone_number',
-            'total_cost', 'store_id', 'is_completed', 'is_active',
+            'subtotal', 'store_id', 'is_completed', 'is_active',
             'item_orders', 'items'
         ]
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'subtotal']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
@@ -41,5 +41,9 @@ class OrderSerializer(serializers.ModelSerializer):
                 item_id_id=item_data['item_id'],
                 quantity=item_data['quantity']
             )
+        
+        # Recalculate subtotal after items are created
+        order.calculate_subtotal()
+        order.save(update_fields=['subtotal'])
         
         return order
