@@ -146,6 +146,11 @@ casa-manila-api/
 - `PUT /api/orders/{id}/` - Update an order
 - `DELETE /api/orders/{id}/` - Archive an order (soft delete, sets is_active=False)
 
+#### Query Parameters
+- `pickup_date` - Filter orders by pickup date (format: YYYY-MM-DD)
+- `phone_number` - Filter orders by phone number
+- `search` - Combined search for pickup date and phone number (e.g., "2024-01-01+0917")
+
 #### Creating an Order with Items
 ```json
 {
@@ -153,7 +158,6 @@ casa-manila-api/
   "customer_name": "John Doe",
   "email": "john@example.com",
   "phone_number": "555-1234",
-  "total_cost": "25.50",
   "store_id": "location-1",
   "items": [
     {
