@@ -10,6 +10,31 @@ class FoodItem(models.Model):
     # TODO: Implement Soft-delete as deleted_at
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        # Track price changes to update related orders
+        price_changed = False
+        if self.pk:
+            try:
+                original = FoodItem.objects.get(pk=self.pk)
+                price_changed = original.price != self.price
+            except FoodItem.DoesNotExist:
+                pass
+        
+        super().save(*args, **kwargs)
+        
+        # If price changed, update all related item orders and their orders
+        if price_changed:
+            from django.db import transaction
+            with transaction.atomic():
+                item_orders = self.order_items.all()
+                for item_order in item_orders:
+                    item_order.line_total = item_order.quantity * self.price
+                    item_order.save(update_fields=['line_total'])
+                    # Recalculate the order's subtotal
+                    item_order.order_id.calculate_subtotal()
+                    item_order.order_id.save(update_fields=['subtotal'])
+    
     class Meta:
         ordering = ["name"]
 
@@ -53,6 +78,16 @@ class ItemOrder(models.Model):
     def save(self, *args, **kwargs):
         self.line_total = self.quantity * self.item_id.price
         super().save(*args, **kwargs)
+        # Recalculate the parent order's subtotal
+        self.order_id.calculate_subtotal()
+        self.order_id.save(update_fields=['subtotal'])
+    
+    def delete(self, *args, **kwargs):
+        order = self.order_id
+        super().delete(*args, **kwargs)
+        # Recalculate the parent order's subtotal after deletion
+        order.calculate_subtotal()
+        order.save(update_fields=['subtotal'])
     
     class Meta:
         ordering = ["created_at"]
