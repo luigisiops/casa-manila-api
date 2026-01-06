@@ -143,7 +143,7 @@ casa-manila-api/
 - `GET /api/orders/` - List all orders
 - `POST /api/orders/` - Create a new order with nested item orders
 - `GET /api/orders/{id}/` - Get a specific order
-- `PUT /api/orders/{id}/` - Update an order
+- `PUT/PATCH /api/orders/{id}/` - Update an order and/or modify items
 - `DELETE /api/orders/{id}/` - Archive an order (soft delete, sets is_active=False)
 
 #### Query Parameters
@@ -171,6 +171,25 @@ casa-manila-api/
   ]
 }
 ```
+
+#### Updating Order Items
+Use PATCH or PUT to update an order's items. The subtotal is automatically recalculated:
+```json
+{
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 3
+    },
+    {
+      "item_id": 2,
+      "quantity": 1
+    }
+  ]
+}
+```
+
+**Note**: When updating with the `items` field, only the items you include will remain on the order. Items not in the list will be removed. To remove a specific item, omit it from the items list.
 
 ## Development
 
@@ -200,9 +219,12 @@ The tests cover:
 - Soft delete behavior
 - ItemOrder read-only enforcement
 - Order creation with items and subtotal calculation
+- Order item updates and quantity modifications
+- Removing items from orders
 - Order deletion cascading to ItemOrders
 - Search filtering by date and phone
 - Model-level line_total and subtotal calculations
+- Automatic subtotal recalculation on item changes
 
 ## Environment Variables
 
