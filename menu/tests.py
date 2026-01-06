@@ -50,7 +50,7 @@ class FoodItemViewSetTestCase(TestCase):
         """List endpoint should only return active items by default."""
         url = reverse("fooditem-list")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 2)
         for item in response.data["results"]:
@@ -60,7 +60,7 @@ class FoodItemViewSetTestCase(TestCase):
         """List endpoint should include inactive items when flag is set."""
         url = reverse("fooditem-list")
         response = self.client.get(url, {"include_inactive": "true"})
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 3)
 
@@ -68,7 +68,7 @@ class FoodItemViewSetTestCase(TestCase):
         """DELETE should archive the item by marking it inactive."""
         url = reverse("fooditem-detail", args=[self.active_item_1.id])
         response = self.client.delete(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.active_item_1.refresh_from_db()
         self.assertFalse(self.active_item_1.is_active)
@@ -87,7 +87,7 @@ class FoodItemViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.active_item_1.refresh_from_db()
         self.assertEqual(self.active_item_1.name, "Updated Name")
@@ -103,7 +103,7 @@ class FoodItemViewSetTestCase(TestCase):
             {"name": "Partially Updated"},
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.active_item_1.refresh_from_db()
         self.assertEqual(self.active_item_1.name, "Partially Updated")
@@ -118,10 +118,10 @@ class FoodItemViewSetTestCase(TestCase):
         self.order.refresh_from_db()
         initial_line_total = self.item_order.line_total
         initial_subtotal = self.order.subtotal
-        
+
         self.assertEqual(initial_line_total, Decimal("20.00"))  # 10.00 * 2
         self.assertEqual(initial_subtotal, Decimal("20.00"))
-        
+
         # Update the price via API
         url = reverse("fooditem-detail", args=[self.active_item_1.id])
         response = self.client.patch(
@@ -129,9 +129,9 @@ class FoodItemViewSetTestCase(TestCase):
             {"price": Decimal("15.00")},
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Verify that item order line total and order subtotal were updated
         self.item_order.refresh_from_db()
         self.order.refresh_from_db()
@@ -167,7 +167,7 @@ class ItemOrderViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -191,7 +191,7 @@ class OrderViewSetTestCase(TestCase):
         """Creating an order with items should calculate subtotal correctly."""
         url = reverse("order-list")
         pickup_time = timezone.now() + timedelta(hours=2)
-        
+
         response = self.client.post(
             url,
             {
@@ -207,11 +207,11 @@ class OrderViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         order_id = response.data["id"]
         order = Order.objects.get(id=order_id)
-        
+
         expected_subtotal = (Decimal("12.50") * 2) + (Decimal("8.25") * 3)
         self.assertEqual(order.item_orders.count(), 2)
         self.assertEqual(order.subtotal, expected_subtotal)
@@ -229,10 +229,10 @@ class OrderViewSetTestCase(TestCase):
             item_id=self.item_one,
             quantity=2
         )
-        
+
         url = reverse("order-detail", args=[order.id])
         response = self.client.delete(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         item_order.refresh_from_db()
@@ -254,11 +254,11 @@ class OrderViewSetTestCase(TestCase):
             phone_number="09178888888",
             store_id="main"
         )
-        
+
         search_term = f"{target_dt.date().isoformat()}+0099"
         url = reverse("order-list")
         response = self.client.get(url, {"search": search_term})
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], match_order.id)
@@ -273,10 +273,10 @@ class OrderViewSetTestCase(TestCase):
             store_id="main"
         )
         ItemOrder.objects.create(order_id=order, item_id=self.item_one, quantity=2)
-        
+
         url = reverse("order-detail", args=[order.id])
         new_pickup_time = timezone.now() + timedelta(days=1)
-        
+
         response = self.client.put(
             url,
             {
@@ -291,7 +291,7 @@ class OrderViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         self.assertEqual(order.customer_name, "Updated Name")
@@ -308,14 +308,14 @@ class OrderViewSetTestCase(TestCase):
             phone_number="09170001111",
             store_id="main"
         )
-        
+
         url = reverse("order-detail", args=[order.id])
         response = self.client.patch(
             url,
             {"phone_number": "09170005555"},
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         self.assertEqual(order.phone_number, "09170005555")
@@ -338,11 +338,11 @@ class OrderViewSetTestCase(TestCase):
         item_order_2 = ItemOrder.objects.create(
             order_id=order, item_id=self.item_two, quantity=1
         )
-        
+
         order.refresh_from_db()
         initial_subtotal = order.subtotal
         self.assertEqual(initial_subtotal, Decimal("20.75"))  # 12.50 + 8.25
-        
+
         # Update item quantities through PATCH
         url = reverse("order-detail", args=[order.id])
         response = self.client.patch(
@@ -355,7 +355,7 @@ class OrderViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         # New subtotal: (12.50 * 3) + (8.25 * 2) = 37.50 + 16.50 = 54.00
@@ -375,11 +375,11 @@ class OrderViewSetTestCase(TestCase):
         item_order_2 = ItemOrder.objects.create(
             order_id=order, item_id=self.item_two, quantity=1
         )
-        
+
         order.refresh_from_db()
         initial_subtotal = order.subtotal
         self.assertEqual(initial_subtotal, Decimal("33.25"))  # (12.50 * 2) + 8.25
-        
+
         # Remove the second item via PATCH (only keep first item)
         url = reverse("order-detail", args=[order.id])
         response = self.client.patch(
@@ -391,7 +391,7 @@ class OrderViewSetTestCase(TestCase):
             },
             format="json"
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         # New subtotal: 12.50 * 2 = 25.00
@@ -421,7 +421,7 @@ class ItemOrderModelTestCase(TestCase):
             quantity=3
         )
         item_order.save()
-        
+
         self.assertEqual(item_order.line_total, Decimal("45.00"))
 
 
@@ -434,20 +434,20 @@ class OrderModelTestCase(TestCase):
             phone_number="09171234567",
             store_id="main"
         )
-        
+
         item1 = FoodItem.objects.create(
             name="Item 1", price=Decimal("10.00"), size="Regular"
         )
         item2 = FoodItem.objects.create(
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
-        
+
         ItemOrder.objects.create(order_id=order, item_id=item1, quantity=2)
         ItemOrder.objects.create(order_id=order, item_id=item2, quantity=1)
-        
+
         order.calculate_subtotal()
         order.save(update_fields=["subtotal"])
-        
+
         expected_subtotal = (Decimal("10.00") * 2) + (Decimal("15.00") * 1)
         self.assertEqual(order.subtotal, expected_subtotal)
 
@@ -462,18 +462,18 @@ class OrderModelTestCase(TestCase):
         item = FoodItem.objects.create(
             name="Test Item", price=Decimal("20.00"), size="Regular"
         )
-        
+
         # Create ItemOrder
         item_order = ItemOrder(order_id=order, item_id=item, quantity=2)
         item_order.save()
-        
+
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("40.00"))
-        
+
         # Update ItemOrder quantity
         item_order.quantity = 3
         item_order.save()
-        
+
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("60.00"))
 
@@ -491,25 +491,28 @@ class OrderModelTestCase(TestCase):
         item2 = FoodItem.objects.create(
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
-        
+
         item_order_1 = ItemOrder.objects.create(order_id=order, item_id=item1, quantity=2)
-        item_order_2 = ItemOrder.objects.create(order_id=order, item_id=item2, quantity=1)
-        
+        ItemOrder.objects.create(order_id=order, item_id=item2, quantity=1)
+
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("35.00"))  # (10*2) + 15
-        
+
         # Delete one item order
         item_order_1.delete()
-        
+
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("15.00"))  # Only item2 remains
 
     def test_fooditem_price_update_cascades_to_orders(self):
-        """Updating a FoodItem price should update all related ItemOrder line_totals and Order subtotals."""
+        """
+        Updating a FoodItem price should update all related ItemOrder line_totals and
+        Order subtotals.
+        """
         item = FoodItem.objects.create(
             name="Test Item", price=Decimal("10.00"), size="Regular"
         )
-        
+
         order1 = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="User 1",
@@ -522,25 +525,25 @@ class OrderModelTestCase(TestCase):
             phone_number="09172222222",
             store_id="main"
         )
-        
+
         item_order_1 = ItemOrder.objects.create(order_id=order1, item_id=item, quantity=2)
         item_order_2 = ItemOrder.objects.create(order_id=order2, item_id=item, quantity=3)
-        
+
         order1.refresh_from_db()
         order2.refresh_from_db()
         self.assertEqual(order1.subtotal, Decimal("20.00"))
         self.assertEqual(order2.subtotal, Decimal("30.00"))
-        
+
         # Update the food item price
         item.price = Decimal("15.00")
         item.save()
-        
+
         # Verify ItemOrder line_totals updated
         item_order_1.refresh_from_db()
         item_order_2.refresh_from_db()
         self.assertEqual(item_order_1.line_total, Decimal("30.00"))  # 15 * 2
         self.assertEqual(item_order_2.line_total, Decimal("45.00"))  # 15 * 3
-        
+
         # Verify Order subtotals updated
         order1.refresh_from_db()
         order2.refresh_from_db()

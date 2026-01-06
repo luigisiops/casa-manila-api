@@ -10,7 +10,7 @@ class FoodItem(models.Model):
     # TODO: Implement Soft-delete as deleted_at
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def save(self, *args, **kwargs):
         # Track price changes to update related orders
         price_changed = False
@@ -20,9 +20,9 @@ class FoodItem(models.Model):
                 price_changed = original.price != self.price
             except FoodItem.DoesNotExist:
                 pass
-        
+
         super().save(*args, **kwargs)
-        
+
         # If price changed, update all related item orders and their orders
         if price_changed:
             from django.db import transaction
@@ -34,7 +34,7 @@ class FoodItem(models.Model):
                     # Recalculate the order's subtotal
                     item_order.order_id.calculate_subtotal()
                     item_order.order_id.save(update_fields=['subtotal'])
-    
+
     class Meta:
         ordering = ["name"]
 
@@ -50,17 +50,17 @@ class Order(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def calculate_subtotal(self):
         """Calculate and update subtotal from related item orders."""
         self.subtotal = sum(item.line_total for item in self.item_orders.all())
-    
+
     def save(self, *args, **kwargs):
         # Skip calculation on creation (no items exist yet)
         if self.pk:
             self.calculate_subtotal()
         super().save(*args, **kwargs)
-    
+
     class Meta:
         ordering = ["pickup_datetime"]
 
@@ -74,20 +74,20 @@ class ItemOrder(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     def save(self, *args, **kwargs):
         self.line_total = self.quantity * self.item_id.price
         super().save(*args, **kwargs)
         # Recalculate the parent order's subtotal
         self.order_id.calculate_subtotal()
         self.order_id.save(update_fields=['subtotal'])
-    
+
     def delete(self, *args, **kwargs):
         order = self.order_id
         super().delete(*args, **kwargs)
         # Recalculate the parent order's subtotal after deletion
         order.calculate_subtotal()
         order.save(update_fields=['subtotal'])
-    
+
     class Meta:
         ordering = ["created_at"]
