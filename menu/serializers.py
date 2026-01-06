@@ -47,3 +47,52 @@ class OrderSerializer(serializers.ModelSerializer):
         order.save(update_fields=['subtotal'])
         
         return order
+    
+    def update(self, instance, validated_data):
+        from django.db import transaction
+        
+        items_data = validated_data.pop('items', None)
+        
+        # Update order fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # If items were provided, update the item orders
+        if items_data is not None:
+            with transaction.atomic():
+                # Get existing item orders
+                existing_item_orders = {io.item_id.id: io for io in instance.item_orders.all()}
+                
+                # Track which items are in the new data
+                updated_item_ids = set()
+                
+                for item_data in items_data:
+                    item_id = item_data['item_id']
+                    quantity = item_data['quantity']
+                    updated_item_ids.add(item_id)
+                    
+                    if item_id in existing_item_orders:
+                        # Update existing item order
+                        item_order = existing_item_orders[item_id]
+                        item_order.quantity = quantity
+                        item_order.save()
+                    else:
+                        # Create new item order
+                        ItemOrder.objects.create(
+                            order_id=instance,
+                            item_id_id=item_id,
+                            quantity=quantity
+                        )
+                
+                # Remove items that weren't in the update
+                for item_id, item_order in existing_item_orders.items():
+                    if item_id not in updated_item_ids:
+                        item_order.delete()
+                
+                # Recalculate subtotal
+                instance.refresh_from_db()
+                instance.calculate_subtotal()
+                instance.save(update_fields=['subtotal'])
+        
+        return instance
