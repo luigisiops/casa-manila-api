@@ -2,6 +2,7 @@ import re
 from datetime import datetime
 from django.db import transaction
 from rest_framework import viewsets, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from menu.models import FoodItem, ItemOrder, Order
 from menu.serializers import FoodItemSerializer, ItemOrderSerializer, OrderSerializer
@@ -77,9 +78,13 @@ class OrderViewSet(ActiveFilterMixin, viewsets.ModelViewSet):
 
         if pickup_date:
             try:
-                qs = qs.filter(pickup_datetime__date=datetime.strptime(pickup_date, "%Y-%m-%d"))
-            except ValueError:
-                pass  # Ignore invalid date format and return unfiltered set.
+                parsed_date = datetime.strptime(pickup_date, "%Y-%m-%d")
+            except ValueError as exc:
+                raise ValidationError(
+                    {"pickup_date": "Invalid date format. Use YYYY-MM-DD."}
+                ) from exc
+
+            qs = qs.filter(pickup_datetime__date=parsed_date)
 
         if phone_number:
             qs = qs.filter(phone_number__icontains=phone_number)

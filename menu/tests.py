@@ -263,6 +263,22 @@ class OrderViewSetTestCase(TestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], match_order.id)
 
+    def test_invalid_pickup_date_returns_400(self):
+        """Invalid pickup_date should return a clear 400 error."""
+        Order.objects.create(
+            pickup_datetime=timezone.now(),
+            customer_name="Test User",
+            phone_number="09170009999",
+            store_id="main",
+        )
+
+        url = reverse("order-list")
+        response = self.client.get(url, {"pickup_date": "2024-13-40"})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("pickup_date", response.data)
+        self.assertIn("Invalid date format", str(response.data["pickup_date"]))
+
     def test_full_update_order(self):
         """Full update (PUT) of an Order should update all fields."""
         order = Order.objects.create(
