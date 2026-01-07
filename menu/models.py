@@ -55,12 +55,6 @@ class Order(models.Model):
         """Calculate and update subtotal from related item orders."""
         self.subtotal = sum(item.line_total for item in self.item_orders.all())
 
-    def save(self, *args, **kwargs):
-        # Skip calculation on creation (no items exist yet)
-        if self.pk:
-            self.calculate_subtotal()
-        super().save(*args, **kwargs)
-
     class Meta:
         ordering = ["pickup_datetime"]
 
