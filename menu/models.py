@@ -32,8 +32,8 @@ class FoodItem(models.Model):
                     item_order.line_total = item_order.quantity * self.price
                     item_order.save(update_fields=['line_total'])
                     # Recalculate the order's subtotal
-                    item_order.order_id.calculate_subtotal()
-                    item_order.order_id.save(update_fields=['subtotal'])
+                    item_order.order.calculate_subtotal()
+                    item_order.order.save(update_fields=['subtotal'])
 
     class Meta:
         ordering = ["name"]
@@ -65,7 +65,7 @@ class Order(models.Model):
         ordering = ["pickup_datetime"]
 
 class ItemOrder(models.Model):
-    order_id = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="item_orders")
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="item_orders")
     item_id = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="order_items")
     quantity = models.IntegerField(
         default=1, null=False, blank=False, validators=[MinValueValidator(1)]
@@ -79,11 +79,11 @@ class ItemOrder(models.Model):
         self.line_total = self.quantity * self.item_id.price
         super().save(*args, **kwargs)
         # Recalculate the parent order's subtotal
-        self.order_id.calculate_subtotal()
-        self.order_id.save(update_fields=['subtotal'])
+        self.order.calculate_subtotal()
+        self.order.save(update_fields=['subtotal'])
 
     def delete(self, *args, **kwargs):
-        order = self.order_id
+        order = self.order
         super().delete(*args, **kwargs)
         # Recalculate the parent order's subtotal after deletion
         order.calculate_subtotal()

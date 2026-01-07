@@ -12,8 +12,8 @@ class ItemOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemOrder
-        fields = ['id', 'order_id', 'food_item', 'item_id', 'quantity', 'line_total', 'is_active']
-        read_only_fields = ['id', 'order_id', 'line_total']
+        fields = ['id', 'order', 'food_item', 'item_id', 'quantity', 'line_total', 'is_active']
+        read_only_fields = ['id', 'order', 'line_total']
 
 class OrderSerializer(serializers.ModelSerializer):
     item_orders = ItemOrderSerializer(many=True, read_only=True)
@@ -37,7 +37,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         for item_data in items_data:
             ItemOrder.objects.create(
-                order_id=order,
+                order=order,
                 item_id_id=item_data['item_id'],
                 quantity=item_data['quantity']
             )
@@ -80,7 +80,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     else:
                         # Create new item order
                         ItemOrder.objects.create(
-                            order_id=instance,
+                            order=instance,
                             item_id_id=item_id,
                             quantity=quantity
                         )
