@@ -416,10 +416,10 @@ class OrderViewSetTestCase(TestCase):
             store_id="main"
         )
         # Create initial item orders
-        item_order_1 = ItemOrder.objects.create(
+        ItemOrder.objects.create(
             order=order, item=self.item_one, quantity=1
         )
-        item_order_2 = ItemOrder.objects.create(
+        ItemOrder.objects.create(
             order=order, item=self.item_two, quantity=1
         )
 
@@ -453,10 +453,10 @@ class OrderViewSetTestCase(TestCase):
             phone_number="09171234567",
             store_id="main"
         )
-        item_order_1 = ItemOrder.objects.create(
+        ItemOrder.objects.create(
             order=order, item=self.item_one, quantity=2
         )
-        item_order_2 = ItemOrder.objects.create(
+        ItemOrder.objects.create(
             order=order, item=self.item_two, quantity=1
         )
 
