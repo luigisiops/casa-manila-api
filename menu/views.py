@@ -56,26 +56,28 @@ class OrderViewSet(ActiveFilterMixin, viewsets.ModelViewSet):
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        """Allow filtering by pickup date/phone; default to active orders only."""
+        """Allow filtering by pickup date/phone/email; default to active orders only."""
         qs = self.filter_active(super().get_queryset())
         params = self.request.query_params
 
         pickup_date = params.get("pickup_date")
         phone_number = params.get("phone_number")
+        email = params.get("email")
         search = params.get("search")
 
-        # Parse combined search like "2024-01-01+0917" into date/phone parts.
+        # Parse combined search string to extract phone and email.
+        # Example: "0917+user@example.com"
         if search:
             tokens = [t for t in re.split(r"[ +]+", search) if t]
             for token in tokens:
-                # Treat valid YYYY-MM-DD as pickup date, everything else as phone fragment.
-                try:
-                    datetime.strptime(token, "%Y-%m-%d")
-                    pickup_date = pickup_date or token
-                    continue
-                except ValueError:
+                # Check if token is an email (contains @)
+                if "@" in token:
+                    email = email or token
+                # Otherwise, treat as phone number
+                else:
                     phone_number = phone_number or token
 
+        # Apply date filter if specified
         if pickup_date:
             try:
                 parsed_date = datetime.strptime(pickup_date, "%Y-%m-%d")
@@ -86,8 +88,11 @@ class OrderViewSet(ActiveFilterMixin, viewsets.ModelViewSet):
 
             qs = qs.filter(pickup_datetime__date=parsed_date)
 
+        # Apply phone/email filter with phone number having precedence
         if phone_number:
             qs = qs.filter(phone_number__icontains=phone_number)
+        elif email:
+            qs = qs.filter(email__icontains=email)
 
         return qs
 

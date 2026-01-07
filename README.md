@@ -149,7 +149,8 @@ casa-manila-api/
 #### Query Parameters
 - `pickup_date` - Filter orders by pickup date (format: YYYY-MM-DD)
 - `phone_number` - Filter orders by phone number
-- `search` - Combined search for pickup date and phone number (e.g., "2024-01-01+0917")
+- `email` - Filter orders by email
+- `search` - Combined search for phone number and email. Gives precedence to phone numbers (e.g., "0917+jane@email.com")
 
 #### Creating an Order with Items
 ```json

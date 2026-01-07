@@ -239,25 +239,93 @@ class OrderViewSetTestCase(TestCase):
         self.assertFalse(order.is_active)
         self.assertFalse(item_order.is_active)
 
-    def test_order_search_by_date_and_phone_fragment(self):
-        """Search parameter should filter by date and phone number."""
-        target_dt = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+    def test_order_search_by_phone_and_email(self):
+        """Search parameter should filter by phone number or email, with phone taking precedence."""
         match_order = Order.objects.create(
-            pickup_datetime=target_dt,
+            pickup_datetime=timezone.now(),
             customer_name="Match User",
+            email="match@example.com",
             phone_number="09170009999",
             store_id="main"
         )
         Order.objects.create(
-            pickup_datetime=target_dt + timedelta(days=1),
+            pickup_datetime=timezone.now(),
             customer_name="Other User",
+            email="other@example.com",
             phone_number="09178888888",
             store_id="main"
         )
 
-        search_term = f"{target_dt.date().isoformat()}+0099"
+        # Test search by phone number fragment
         url = reverse("order-list")
-        response = self.client.get(url, {"search": search_term})
+        response = self.client.get(url, {"search": "0099"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], match_order.id)
+
+        # Test search by email
+        response = self.client.get(url, {"search": "match@example.com"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], match_order.id)
+
+        # Test that phone takes precedence over email
+        response = self.client.get(url, {"search": "0099+other@example.com"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        # Should match by phone (0099) not email (other@example.com)
+        self.assertEqual(response.data["results"][0]["id"], match_order.id)
+
+    def test_order_filter_by_date_and_search(self):
+        """Filtering by pickup_date and search should work together."""
+        today = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        tomorrow = today + timedelta(days=1)
+
+        # Order matching both date and phone
+        match_order = Order.objects.create(
+            pickup_datetime=today,
+            customer_name="Match User",
+            email="match@example.com",
+            phone_number="09170009999",
+            store_id="main"
+        )
+        # Order with same phone but different date
+        Order.objects.create(
+            pickup_datetime=tomorrow,
+            customer_name="Same Phone User",
+            email="samphone@example.com",
+            phone_number="09170009999",
+            store_id="main"
+        )
+        # Order with same date but different phone
+        Order.objects.create(
+            pickup_datetime=today,
+            customer_name="Same Date User",
+            email="samedate@example.com",
+            phone_number="09178888888",
+            store_id="main"
+        )
+
+        url = reverse("order-list")
+
+        # Filter by both date and phone search
+        response = self.client.get(url, {
+            "pickup_date": today.date().isoformat(),
+            "search": "0099"
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], match_order.id)
+
+        # Filter by date and email search
+        response = self.client.get(url, {
+            "pickup_date": today.date().isoformat(),
+            "search": "match@example.com"
+        })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
