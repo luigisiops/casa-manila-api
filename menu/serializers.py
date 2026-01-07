@@ -5,7 +5,7 @@ class FoodItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodItem
         fields = ['id', 'name', 'price', 'size', 'category', 'is_active']
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'is_active']
 
 class ItemOrderSerializer(serializers.ModelSerializer):
     food_item = FoodItemSerializer(source='item', read_only=True)
@@ -31,7 +31,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'subtotal', 'store_id', 'is_completed', 'is_active',
             'item_orders', 'items'
         ]
-        read_only_fields = ['id', 'subtotal']
+        read_only_fields = ['id', 'subtotal', 'is_active']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
