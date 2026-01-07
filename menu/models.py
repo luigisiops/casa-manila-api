@@ -19,6 +19,8 @@ class FoodItem(models.Model):
                 original = FoodItem.objects.get(pk=self.pk)
                 price_changed = original.price != self.price
             except FoodItem.DoesNotExist:
+                # Edge case: object was deleted after being loaded
+                # Treat as new object with no price change
                 pass
 
         super().save(*args, **kwargs)
