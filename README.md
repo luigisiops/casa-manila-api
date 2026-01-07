@@ -161,11 +161,11 @@ casa-manila-api/
   "store_id": "location-1",
   "items": [
     {
-      "item_id": 1,
+      "item": 1,
       "quantity": 2
     },
     {
-      "item_id": 3,
+      "item": 3,
       "quantity": 1
     }
   ]
@@ -178,11 +178,11 @@ Use PATCH or PUT to update an order's items. The subtotal is automatically recal
 {
   "items": [
     {
-      "item_id": 1,
+      "item": 1,
       "quantity": 3
     },
     {
-      "item_id": 2,
+      "item": 2,
       "quantity": 1
     }
   ]

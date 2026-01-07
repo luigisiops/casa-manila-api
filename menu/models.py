@@ -66,7 +66,7 @@ class Order(models.Model):
 
 class ItemOrder(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="item_orders")
-    item_id = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="order_items")
+    item = models.ForeignKey(FoodItem, on_delete=models.PROTECT, related_name="order_items")
     quantity = models.IntegerField(
         default=1, null=False, blank=False, validators=[MinValueValidator(1)]
     )
@@ -76,7 +76,7 @@ class ItemOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        self.line_total = self.quantity * self.item_id.price
+        self.line_total = self.quantity * self.item.price
         super().save(*args, **kwargs)
         # Recalculate the parent order's subtotal
         self.order.calculate_subtotal()

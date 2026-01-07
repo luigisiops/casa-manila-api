@@ -8,16 +8,16 @@ class FoodItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 class ItemOrderSerializer(serializers.ModelSerializer):
-    food_item = FoodItemSerializer(source='item_id', read_only=True)
+    food_item = FoodItemSerializer(source='item', read_only=True)
 
     class Meta:
         model = ItemOrder
-        fields = ['id', 'order', 'food_item', 'item_id', 'quantity', 'line_total', 'is_active']
+        fields = ['id', 'order', 'food_item', 'item', 'quantity', 'line_total', 'is_active']
         read_only_fields = ['id', 'order', 'line_total']
 
 class OrderSerializer(serializers.ModelSerializer):
     item_orders = ItemOrderSerializer(many=True, read_only=True)
-    # Accept simple item_id and quantity for creation
+    # Accept simple item and quantity for creation
     items = serializers.ListField(
         child=serializers.DictField(), write_only=True, required=False
     )
@@ -38,7 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
         for item_data in items_data:
             ItemOrder.objects.create(
                 order=order,
-                item_id_id=item_data['item_id'],
+                item_id=item_data['item'],
                 quantity=item_data['quantity']
             )
 
@@ -62,32 +62,32 @@ class OrderSerializer(serializers.ModelSerializer):
             # If items were provided, update the item orders
             if items_data is not None:
                 # Get existing item orders
-                existing_item_orders = {io.item_id.id: io for io in instance.item_orders.all()}
+                existing_item_orders = {io.item.id: io for io in instance.item_orders.all()}
 
                 # Track which items are in the new data
-                updated_item_ids = set()
+                updated_items = set()
 
                 for item_data in items_data:
-                    item_id = item_data['item_id']
+                    item = item_data['item']
                     quantity = item_data['quantity']
-                    updated_item_ids.add(item_id)
+                    updated_items.add(item)
 
-                    if item_id in existing_item_orders:
+                    if item in existing_item_orders:
                         # Update existing item order
-                        item_order = existing_item_orders[item_id]
+                        item_order = existing_item_orders[item]
                         item_order.quantity = quantity
                         item_order.save()
                     else:
                         # Create new item order
                         ItemOrder.objects.create(
                             order=instance,
-                            item_id_id=item_id,
+                            item_id=item,
                             quantity=quantity
                         )
 
                 # Remove items that weren't in the update
-                for item_id, item_order in existing_item_orders.items():
-                    if item_id not in updated_item_ids:
+                for item, item_order in existing_item_orders.items():
+                    if item not in updated_items:
                         item_order.delete()
 
                 # Recalculate subtotal

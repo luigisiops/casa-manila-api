@@ -42,7 +42,7 @@ class FoodItemViewSetTestCase(TestCase):
         )
         self.item_order = ItemOrder.objects.create(
             order=self.order,
-            item_id=self.active_item_1,
+            item=self.active_item_1,
             quantity=2
         )
 
@@ -162,7 +162,7 @@ class ItemOrderViewSetTestCase(TestCase):
             url,
             {
                 "order": self.order.id,
-                "item_id": self.food_item.id,
+                "item": self.food_item.id,
                 "quantity": 1
             },
             format="json"
@@ -201,8 +201,8 @@ class OrderViewSetTestCase(TestCase):
                 "phone_number": "09170001111",
                 "store_id": "branch-1",
                 "items": [
-                    {"item_id": self.item_one.id, "quantity": 2},
-                    {"item_id": self.item_two.id, "quantity": 3},
+                    {"item": self.item_one.id, "quantity": 2},
+                    {"item": self.item_two.id, "quantity": 3},
                 ],
             },
             format="json"
@@ -226,7 +226,7 @@ class OrderViewSetTestCase(TestCase):
         )
         item_order = ItemOrder.objects.create(
             order=order,
-            item_id=self.item_one,
+            item=self.item_one,
             quantity=2
         )
 
@@ -272,7 +272,7 @@ class OrderViewSetTestCase(TestCase):
             phone_number="09170001111",
             store_id="main"
         )
-        ItemOrder.objects.create(order=order, item_id=self.item_one, quantity=2)
+        ItemOrder.objects.create(order=order, item=self.item_one, quantity=2)
 
         url = reverse("order-detail", args=[order.id])
         new_pickup_time = timezone.now() + timedelta(days=1)
@@ -333,10 +333,10 @@ class OrderViewSetTestCase(TestCase):
         )
         # Create initial item orders
         item_order_1 = ItemOrder.objects.create(
-            order=order, item_id=self.item_one, quantity=1
+            order=order, item=self.item_one, quantity=1
         )
         item_order_2 = ItemOrder.objects.create(
-            order=order, item_id=self.item_two, quantity=1
+            order=order, item=self.item_two, quantity=1
         )
 
         order.refresh_from_db()
@@ -349,8 +349,8 @@ class OrderViewSetTestCase(TestCase):
             url,
             {
                 "items": [
-                    {"item_id": self.item_one.id, "quantity": 3},
-                    {"item_id": self.item_two.id, "quantity": 2},
+                    {"item": self.item_one.id, "quantity": 3},
+                    {"item": self.item_two.id, "quantity": 2},
                 ]
             },
             format="json"
@@ -370,10 +370,10 @@ class OrderViewSetTestCase(TestCase):
             store_id="main"
         )
         item_order_1 = ItemOrder.objects.create(
-            order=order, item_id=self.item_one, quantity=2
+            order=order, item=self.item_one, quantity=2
         )
         item_order_2 = ItemOrder.objects.create(
-            order=order, item_id=self.item_two, quantity=1
+            order=order, item=self.item_two, quantity=1
         )
 
         order.refresh_from_db()
@@ -386,7 +386,7 @@ class OrderViewSetTestCase(TestCase):
             url,
             {
                 "items": [
-                    {"item_id": self.item_one.id, "quantity": 2}
+                    {"item": self.item_one.id, "quantity": 2}
                 ]
             },
             format="json"
@@ -417,7 +417,7 @@ class ItemOrderModelTestCase(TestCase):
         """ItemOrder should calculate line_total automatically on save."""
         item_order = ItemOrder(
             order=self.order,
-            item_id=self.food_item,
+            item=self.food_item,
             quantity=3
         )
         item_order.save()
@@ -442,8 +442,8 @@ class OrderModelTestCase(TestCase):
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
 
-        ItemOrder.objects.create(order=order, item_id=item1, quantity=2)
-        ItemOrder.objects.create(order=order, item_id=item2, quantity=1)
+        ItemOrder.objects.create(order=order, item=item1, quantity=2)
+        ItemOrder.objects.create(order=order, item=item2, quantity=1)
 
         order.calculate_subtotal()
         order.save(update_fields=["subtotal"])
@@ -464,7 +464,7 @@ class OrderModelTestCase(TestCase):
         )
 
         # Create ItemOrder
-        item_order = ItemOrder(order=order, item_id=item, quantity=2)
+        item_order = ItemOrder(order=order, item=item, quantity=2)
         item_order.save()
 
         order.refresh_from_db()
@@ -492,8 +492,8 @@ class OrderModelTestCase(TestCase):
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
 
-        item_order_1 = ItemOrder.objects.create(order=order, item_id=item1, quantity=2)
-        ItemOrder.objects.create(order=order, item_id=item2, quantity=1)
+        item_order_1 = ItemOrder.objects.create(order=order, item=item1, quantity=2)
+        ItemOrder.objects.create(order=order, item=item2, quantity=1)
 
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("35.00"))  # (10*2) + 15
@@ -526,8 +526,8 @@ class OrderModelTestCase(TestCase):
             store_id="main"
         )
 
-        item_order_1 = ItemOrder.objects.create(order=order1, item_id=item, quantity=2)
-        item_order_2 = ItemOrder.objects.create(order=order2, item_id=item, quantity=3)
+        item_order_1 = ItemOrder.objects.create(order=order1, item=item, quantity=2)
+        item_order_2 = ItemOrder.objects.create(order=order2, item=item, quantity=3)
 
         order1.refresh_from_db()
         order2.refresh_from_db()
