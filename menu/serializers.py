@@ -53,14 +53,14 @@ class OrderSerializer(serializers.ModelSerializer):
 
         items_data = validated_data.pop('items', None)
 
-        # Update order fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            # Update order fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        # If items were provided, update the item orders
-        if items_data is not None:
-            with transaction.atomic():
+            # If items were provided, update the item orders
+            if items_data is not None:
                 # Get existing item orders
                 existing_item_orders = {io.item_id.id: io for io in instance.item_orders.all()}
 
