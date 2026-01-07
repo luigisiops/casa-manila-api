@@ -15,12 +15,14 @@ class ItemOrderSerializer(serializers.ModelSerializer):
         fields = ['id', 'order', 'food_item', 'item', 'quantity', 'line_total', 'is_active']
         read_only_fields = ['id', 'order', 'line_total']
 
+class OrderItemInputSerializer(serializers.Serializer):
+    item = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
 class OrderSerializer(serializers.ModelSerializer):
     item_orders = ItemOrderSerializer(many=True, read_only=True)
     # Accept simple item and quantity for creation
-    items = serializers.ListField(
-        child=serializers.DictField(), write_only=True, required=False
-    )
+    items = OrderItemInputSerializer(many=True, write_only=True, required=False)
 
     class Meta:
         model = Order
