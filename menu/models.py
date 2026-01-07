@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import MinValueValidator
 
 class FoodItem(models.Model):
@@ -25,7 +25,6 @@ class FoodItem(models.Model):
 
         # If price changed, update all related item orders and their orders
         if price_changed:
-            from django.db import transaction
             with transaction.atomic():
                 item_orders = self.order_items.all()
                 for item_order in item_orders:
@@ -70,18 +69,25 @@ class ItemOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        self.line_total = self.quantity * self.item.price
-        super().save(*args, **kwargs)
-        # Recalculate the parent order's subtotal
-        self.order.calculate_subtotal()
-        self.order.save(update_fields=['subtotal'])
+        # Ensure line_total and order subtotal updates are atomic and serialized per order
+        with transaction.atomic():
+            # Acquire a row-level lock on the related order to prevent concurrent subtotal races
+            order = Order.objects.select_for_update().get(pk=self.order.pk)
+            self.line_total = self.quantity * self.item.price
+            super().save(*args, **kwargs)
+            # Recalculate and persist the locked order's subtotal
+            order.calculate_subtotal()
+            order.save(update_fields=['subtotal'])
 
     def delete(self, *args, **kwargs):
-        order = self.order
-        super().delete(*args, **kwargs)
-        # Recalculate the parent order's subtotal after deletion
-        order.calculate_subtotal()
-        order.save(update_fields=['subtotal'])
+        # Ensure deletion and subtotal recalculation are atomic and serialized per order
+        with transaction.atomic():
+            # Lock the related order row to avoid concurrent subtotal races
+            order = Order.objects.select_for_update().get(pk=self.order.pk)
+            super().delete(*args, **kwargs)
+            # Recalculate and persist the locked order's subtotal after deletion
+            order.calculate_subtotal()
+            order.save(update_fields=['subtotal'])
 
     class Meta:
         ordering = ["created_at"]
