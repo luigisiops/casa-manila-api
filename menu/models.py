@@ -26,13 +26,30 @@ class FoodItem(models.Model):
         # If price changed, update all related item orders and their orders
         if price_changed:
             with transaction.atomic():
-                item_orders = self.order_items.all()
-                for item_order in item_orders:
-                    item_order.line_total = item_order.quantity * self.price
-                    item_order.save(update_fields=['line_total'])
-                    # Recalculate the order's subtotal
-                    item_order.order.calculate_subtotal()
-                    item_order.order.save(update_fields=['subtotal'])
+                # Update all related item order line_totals in a single query
+                item_orders_qs = self.order_items.all()
+                item_orders_qs.update(
+                    line_total=models.F("quantity") * self.price
+                )
+                # Recalculate subtotals for affected orders in bulk
+                order_totals = item_orders_qs.values("order").annotate(
+                    subtotal=models.Sum("line_total")
+                )
+                orders = [ot["order"] for ot in order_totals]
+                if orders:
+                    orders_by_id = {
+                        order.id: order
+                        for order in Order.objects.filter(id__in=orders)
+                    }
+                    for ot in order_totals:
+                        order = orders_by_id.get(ot["order"])
+                        if order is not None:
+                            # Default to 0 if subtotal is None
+                            order.subtotal = ot["subtotal"] or 0
+                    Order.objects.bulk_update(
+                        list(orders_by_id.values()),
+                        ["subtotal"],
+                    )
 
     class Meta:
         ordering = ["name"]
