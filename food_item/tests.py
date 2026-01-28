@@ -12,6 +12,8 @@ from orders.models import Order, ItemOrder
 
 class FoodItemViewSetTestCase(TestCase):
     def setUp(self):
+        from orders.services import create_item_order
+        
         self.client = APIClient()
         self.active_item_1 = FoodItem.objects.create(
             name="Active 1",
@@ -41,7 +43,7 @@ class FoodItemViewSetTestCase(TestCase):
             phone_number="09171234567",
             store_id="main"
         )
-        self.item_order = ItemOrder.objects.create(
+        self.item_order = create_item_order(
             order=self.order,
             item=self.active_item_1,
             quantity=2
@@ -222,13 +224,15 @@ class OrderViewSetTestCase(TestCase):
 
     def test_order_destroy_archives_order_and_items(self):
         """DELETE should archive order and all related item orders."""
+        from orders.services import create_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
             phone_number="09171234567",
             store_id="main"
         )
-        item_order = ItemOrder.objects.create(
+        item_order = create_item_order(
             order=order,
             item=self.item_one,
             quantity=2
@@ -353,6 +357,8 @@ class OrderViewSetTestCase(TestCase):
 
     def test_full_update_order(self):
         """Full update (PUT) of an Order should update all fields."""
+        from orders.services import create_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Original Name",
@@ -360,7 +366,7 @@ class OrderViewSetTestCase(TestCase):
             phone_number="09170001111",
             store_id="main"
         )
-        ItemOrder.objects.create(order=order, item=self.item_one, quantity=2)
+        create_item_order(order=order, item=self.item_one, quantity=2)
 
         url = reverse("order-detail", args=[order.id])
         new_pickup_time = timezone.now() + timedelta(days=1)
@@ -413,6 +419,8 @@ class OrderViewSetTestCase(TestCase):
 
     def test_update_order_with_item_list_recalculates_subtotal(self):
         """Updating an order's items should recalculate the subtotal."""
+        from orders.services import create_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
@@ -420,12 +428,8 @@ class OrderViewSetTestCase(TestCase):
             store_id="main"
         )
         # Create initial item orders
-        ItemOrder.objects.create(
-            order=order, item=self.item_one, quantity=1
-        )
-        ItemOrder.objects.create(
-            order=order, item=self.item_two, quantity=1
-        )
+        create_item_order(order=order, item=self.item_one, quantity=1)
+        create_item_order(order=order, item=self.item_two, quantity=1)
 
         order.refresh_from_db()
         initial_subtotal = order.subtotal
@@ -451,18 +455,16 @@ class OrderViewSetTestCase(TestCase):
 
     def test_removing_items_from_order_updates_subtotal(self):
         """Removing an item from an order should update the subtotal."""
+        from orders.services import create_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
             phone_number="09171234567",
             store_id="main"
         )
-        ItemOrder.objects.create(
-            order=order, item=self.item_one, quantity=2
-        )
-        ItemOrder.objects.create(
-            order=order, item=self.item_two, quantity=1
-        )
+        create_item_order(order=order, item=self.item_one, quantity=2)
+        create_item_order(order=order, item=self.item_two, quantity=1)
 
         order.refresh_from_db()
         initial_subtotal = order.subtotal
@@ -502,18 +504,21 @@ class ItemOrderModelTestCase(TestCase):
         )
 
     def test_line_total_calculation_on_save(self):
-        """ItemOrder should calculate line_total automatically on save."""
-        item_order = ItemOrder(
+        """ItemOrder should calculate line_total automatically via service."""
+        from orders.services import create_item_order
+        
+        item_order = create_item_order(
             order=self.order,
             item=self.food_item,
             quantity=3
         )
-        item_order.save()
 
         self.assertEqual(item_order.line_total, Decimal("45.00"))
 
     def test_unit_price_locked_at_creation(self):
         """ItemOrder should capture the FoodItem.price at creation and never update it."""
+        from orders.services import create_item_order
+        
         item = FoodItem.objects.create(
             name="Lock Test Item",
             price=Decimal("10.00"),
@@ -527,7 +532,7 @@ class ItemOrderModelTestCase(TestCase):
         )
 
         # Create ItemOrder at price 10.00
-        item_order = ItemOrder.objects.create(
+        item_order = create_item_order(
             order=order,
             item=item,
             quantity=2
@@ -548,6 +553,8 @@ class ItemOrderModelTestCase(TestCase):
 
     def test_cannot_modify_itemorder_for_completed_order(self):
         """ItemOrder cannot be modified if its order status is COMPLETED."""
+        from orders.services import create_item_order, update_item_order
+        
         item = FoodItem.objects.create(
             name="Test Item",
             price=Decimal("10.00"),
@@ -560,7 +567,7 @@ class ItemOrderModelTestCase(TestCase):
             store_id="main"
         )
         # Create ItemOrder while order is still PLACED
-        item_order = ItemOrder.objects.create(
+        item_order = create_item_order(
             order=order,
             item=item,
             quantity=1
@@ -570,15 +577,16 @@ class ItemOrderModelTestCase(TestCase):
         order.status = 'COMPLETED'
         order.save()
 
-        # Try to modify quantity on the completed order
-        item_order.quantity = 2
+        # Try to modify quantity on the completed order using service
         with self.assertRaises(ValueError) as context:
-            item_order.save()
+            update_item_order(item_order, quantity=2)
         
         self.assertIn("Cannot modify ItemOrder for a completed order", str(context.exception))
 
     def test_cannot_create_itemorder_for_completed_order(self):
         """Cannot create a new ItemOrder for an already-completed order."""
+        from orders.services import create_item_order
+        
         item = FoodItem.objects.create(
             name="Test Item",
             price=Decimal("10.00"),
@@ -592,20 +600,22 @@ class ItemOrderModelTestCase(TestCase):
             status="COMPLETED"
         )
 
-        # Try to create ItemOrder on completed order
+        # Try to create ItemOrder on completed order using service
         with self.assertRaises(ValueError) as context:
-            ItemOrder.objects.create(
+            create_item_order(
                 order=order,
                 item=item,
                 quantity=1
             )
         
-        self.assertIn("Cannot modify ItemOrder for a completed order", str(context.exception))
+        self.assertIn("Cannot add items to a completed order", str(context.exception))
 
 
 class OrderModelTestCase(TestCase):
     def test_subtotal_calculation(self):
         """Order should calculate subtotal from all related item orders."""
+        from orders.services import create_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
@@ -620,17 +630,17 @@ class OrderModelTestCase(TestCase):
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
 
-        ItemOrder.objects.create(order=order, item=item1, quantity=2)
-        ItemOrder.objects.create(order=order, item=item2, quantity=1)
+        create_item_order(order=order, item=item1, quantity=2)
+        create_item_order(order=order, item=item2, quantity=1)
 
-        order.calculate_subtotal()
-        order.save(update_fields=["subtotal"])
-
+        order.refresh_from_db()
         expected_subtotal = (Decimal("10.00") * 2) + (Decimal("15.00") * 1)
         self.assertEqual(order.subtotal, expected_subtotal)
 
     def test_itemorder_save_updates_order_subtotal(self):
         """Creating or updating an ItemOrder should automatically update the Order subtotal."""
+        from orders.services import create_item_order, update_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
@@ -641,22 +651,22 @@ class OrderModelTestCase(TestCase):
             name="Test Item", price=Decimal("20.00"), size="Regular"
         )
 
-        # Create ItemOrder
-        item_order = ItemOrder(order=order, item=item, quantity=2)
-        item_order.save()
+        # Create ItemOrder using service
+        item_order = create_item_order(order=order, item=item, quantity=2)
 
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("40.00"))
 
-        # Update ItemOrder quantity
-        item_order.quantity = 3
-        item_order.save()
+        # Update ItemOrder quantity using service
+        update_item_order(item_order, quantity=3)
 
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("60.00"))
 
     def test_itemorder_delete_updates_order_subtotal(self):
         """Deleting an ItemOrder should automatically update the Order subtotal."""
+        from orders.services import create_item_order, delete_item_order
+        
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
             customer_name="Test User",
@@ -670,14 +680,14 @@ class OrderModelTestCase(TestCase):
             name="Item 2", price=Decimal("15.00"), size="Regular"
         )
 
-        item_order_1 = ItemOrder.objects.create(order=order, item=item1, quantity=2)
-        ItemOrder.objects.create(order=order, item=item2, quantity=1)
+        item_order_1 = create_item_order(order=order, item=item1, quantity=2)
+        create_item_order(order=order, item=item2, quantity=1)
 
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("35.00"))  # (10*2) + 15
 
-        # Delete one item order
-        item_order_1.delete()
+        # Delete one item order using service
+        delete_item_order(item_order_1)
 
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("15.00"))  # Only item2 remains
@@ -687,6 +697,8 @@ class OrderModelTestCase(TestCase):
         Creating an ItemOrder should capture the FoodItem price at that moment (locked).
         Subsequent FoodItem price changes should not affect the ItemOrder unit_price.
         """
+        from orders.services import create_item_order
+        
         item = FoodItem.objects.create(
             name="Test Item", price=Decimal("10.00"), size="Regular"
         )
@@ -705,7 +717,7 @@ class OrderModelTestCase(TestCase):
         )
 
         # Create first item order at price 10.00
-        item_order_1 = ItemOrder.objects.create(order=order1, item=item, quantity=2)
+        item_order_1 = create_item_order(order=order1, item=item, quantity=2)
         self.assertEqual(item_order_1.unit_price, Decimal("10.00"))
         self.assertEqual(item_order_1.line_total, Decimal("20.00"))
 
@@ -714,9 +726,10 @@ class OrderModelTestCase(TestCase):
         item.save()
 
         # Create second item order at new price 15.00
-        item_order_2 = ItemOrder.objects.create(order=order2, item=item, quantity=3)
+        item_order_2 = create_item_order(order=order2, item=item, quantity=3)
         self.assertEqual(item_order_2.unit_price, Decimal("15.00"))
         self.assertEqual(item_order_2.line_total, Decimal("45.00"))
+        
         # Verify first item order unit_price was NOT changed (still locked at 10.00)
         item_order_1.refresh_from_db()
         self.assertEqual(item_order_1.unit_price, Decimal("10.00"))

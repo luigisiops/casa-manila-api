@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from orders.models import Order, ItemOrder
+from orders.services import create_order_with_items, add_or_update_order_items
 from food_item.serializers import FoodItemSerializer
 
 
@@ -34,67 +35,21 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'subtotal', 'status']
 
     def create(self, validated_data):
-        items_data = validated_data.pop('items', [])
-        order = Order.objects.create(**validated_data)
-
-        for item_data in items_data:
-            ItemOrder.objects.create(
-                order=order,
-                item_id=item_data['item'],
-                quantity=item_data['quantity']
-            )
-
-        # Recalculate subtotal after items are created
-        order.calculate_subtotal()
-        order.save(update_fields=['subtotal'])
-
-        return order
+        """Create an order with items using the service layer."""
+        return create_order_with_items(validated_data)
 
     def update(self, instance, validated_data):
-        from django.db import transaction
-
+        """Update an order using the service layer for item management."""
         items_data = validated_data.pop('items', None)
 
-        with transaction.atomic():
-            # Update order fields
-            for attr, value in validated_data.items():
-                setattr(instance, attr, value)
-            instance.save()
+        # Update order fields directly
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
 
-            # If items were provided, update the item orders
-            if items_data is not None:
-                # Get existing item orders
-                existing_item_orders = {io.item.id: io for io in instance.item_orders.all()}
-
-                # Track which items are in the new data
-                updated_items = set()
-
-                for item_data in items_data:
-                    item = item_data['item']
-                    quantity = item_data['quantity']
-                    updated_items.add(item)
-
-                    if item in existing_item_orders:
-                        # Update existing item order
-                        item_order = existing_item_orders[item]
-                        item_order.quantity = quantity
-                        item_order.save()
-                    else:
-                        # Create new item order
-                        ItemOrder.objects.create(
-                            order=instance,
-                            item_id=item,
-                            quantity=quantity
-                        )
-
-                # Remove items that weren't in the update
-                for item, item_order in existing_item_orders.items():
-                    if item not in updated_items:
-                        item_order.delete()
-
-                # Recalculate subtotal
-                instance.refresh_from_db()
-                instance.calculate_subtotal()
-                instance.save(update_fields=['subtotal'])
+        # If items were provided, update them using the service
+        if items_data is not None:
+            add_or_update_order_items(instance, items_data)
+            instance.refresh_from_db()
 
         return instance

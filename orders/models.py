@@ -1,4 +1,4 @@
-from django.db import models, transaction
+from django.db import models
 from django.core.validators import MinValueValidator
 from food_item.models import FoodItem
 
@@ -28,11 +28,10 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Prevent modifications to completed orders
+        # Prevent direct subtotal modification of completed orders
         if self.pk:
             existing = Order.objects.get(pk=self.pk)
             if existing.status == 'COMPLETED' and self.status == 'COMPLETED':
-                # Status remains COMPLETED, prevent subtotal changes
                 if existing.subtotal != self.subtotal:
                     raise ValueError("Cannot modify subtotal of a completed order")
 
@@ -60,43 +59,6 @@ class ItemOrder(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def save(self, *args, **kwargs):
-        # Prevent updates to ItemOrder if its order is COMPLETED
-        if self.pk:
-            existing = ItemOrder.objects.get(pk=self.pk)
-            if existing.order.status == 'COMPLETED':
-                raise ValueError("Cannot modify ItemOrder for a completed order")
-
-        # Ensure line_total and order subtotal updates are atomic and serialized per order
-        with transaction.atomic():
-            # Acquire a row-level lock on the related order to prevent concurrent subtotal races
-            order = Order.objects.select_for_update().get(pk=self.order.pk)
-
-            # Prevent modification of completed orders
-            if order.status == 'COMPLETED':
-                raise ValueError("Cannot modify ItemOrder for a completed order")
-
-            # On creation, capture the current unit_price from FoodItem exactly once
-            if not self.pk:
-                self.unit_price = self.item.price
-
-            # Calculate line_total using the locked unit_price
-            self.line_total = self.quantity * self.unit_price
-            super().save(*args, **kwargs)
-            # Recalculate and persist the locked order's subtotal
-            order.calculate_subtotal()
-            order.save(update_fields=['subtotal'])
-
-    def delete(self, *args, **kwargs):
-        # Ensure deletion and subtotal recalculation are atomic and serialized per order
-        with transaction.atomic():
-            # Lock the related order row to avoid concurrent subtotal races
-            order = Order.objects.select_for_update().get(pk=self.order.pk)
-            super().delete(*args, **kwargs)
-            # Recalculate and persist the locked order's subtotal after deletion
-            order.calculate_subtotal()
-            order.save(update_fields=['subtotal'])
 
     class Meta:
         ordering = ["created_at"]
