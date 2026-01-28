@@ -3,23 +3,26 @@ Validation utilities for order-related data.
 """
 
 import re
+from django.core.validators import EmailValidator as DjangoEmailValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError
 
 
 def validate_email_format(email):
     """
-    Validate that the email follows a basic valid format.
+    Validate that the email follows a valid format using Django's EmailValidator.
     Raises ValidationError if invalid.
     """
     if not email:
         return None
 
-    # Basic email regex: alphanumeric + some special chars @ alphanumeric + domain
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    if not re.match(email_pattern, email):
+    validator = DjangoEmailValidator()
+    try:
+        validator(email)
+    except DjangoValidationError as exc:
         raise ValidationError(
             {"search": f"Invalid email format: {email}"}
-        )
+        ) from exc
     return email
 
 
