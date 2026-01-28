@@ -14,7 +14,7 @@ class Order(models.Model):
 
     pickup_datetime = models.DateTimeField(null=False, blank=False, db_index=True)
     customer_name = models.CharField(max_length=50, null=False, blank=False)
-    email = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(max_length=50, blank=True, null=True)
     phone_number = models.CharField(max_length=15)
     subtotal = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     store_id = models.CharField(max_length=20, help_text="One of two possible locations")
