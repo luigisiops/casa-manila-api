@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -93,9 +94,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         Cancels the order by setting status to CANCELLED and marking item orders as inactive.
         """
         instance = self.get_object()
-        instance.status = 'CANCELLED'
-        instance.save(update_fields=['status'])
-        instance.item_orders.update(is_active=False)
+        with transaction.atomic():
+            instance.status = 'CANCELLED'
+            instance.save(update_fields=['status'])
+            instance.item_orders.update(is_active=False)
         return Response(
             {'detail': 'Order cancelled successfully'},
             status=status.HTTP_200_OK
