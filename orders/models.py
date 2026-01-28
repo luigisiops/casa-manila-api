@@ -37,10 +37,6 @@ class Order(models.Model):
 
         super().save(*args, **kwargs)
 
-    def calculate_subtotal(self):
-        """Calculate and update subtotal from related item orders."""
-        self.subtotal = sum(item.line_total for item in self.item_orders.all())
-
     class Meta:
         ordering = ["pickup_datetime"]
 
