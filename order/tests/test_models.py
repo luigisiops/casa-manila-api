@@ -255,7 +255,7 @@ class OrderModelTestCase(TestCase):
 
     def test_cannot_modify_subtotal_of_completed_order(self):
         """Completed orders should have frozen subtotals that cannot be changed."""
-        item = FoodItem.objects.create(
+        FoodItem.objects.create(
             name="Test Item",
             price=Decimal("10.00"),
             size="Regular"
