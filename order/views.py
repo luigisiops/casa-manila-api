@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from order.models import ItemOrder, Order
 from order.serializers import ItemOrderSerializer, OrderSerializer
+from order.validators import validate_email_format, validate_phone_format
 
 
 class ItemOrderViewSet(viewsets.ReadOnlyModelViewSet):
@@ -58,10 +59,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             for token in tokens:
                 # Check if token is an email (contains @)
                 if "@" in token:
-                    email = email or token
+                    validated_email = validate_email_format(token)
+                    email = email or validated_email
                 # Otherwise, treat as phone number
                 else:
-                    phone_number = phone_number or token
+                    validated_phone = validate_phone_format(token)
+                    phone_number = phone_number or validated_phone
 
         # Apply date filter if specified
         if pickup_date:
