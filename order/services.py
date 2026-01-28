@@ -212,6 +212,16 @@ def add_or_update_order_items(order: Order, items_data: list[dict]) -> None:
         # Track which items are in the new data
         updated_items = set()
 
+        # Collect IDs of new items to fetch in bulk
+        new_item_ids = []
+        for item_data in items_data:
+            item_id = item_data['item']
+            if item_id not in existing_item_orders:
+                new_item_ids.append(item_id)
+
+        # Fetch all new food items in a single query to avoid N+1 problem
+        new_food_items_map = FoodItem.objects.in_bulk(new_item_ids) if new_item_ids else {}
+
         for item_data in items_data:
             item_id = item_data['item']
             quantity = item_data['quantity']
@@ -224,8 +234,8 @@ def add_or_update_order_items(order: Order, items_data: list[dict]) -> None:
                 item_order.line_total = quantity * item_order.unit_price
                 item_order.save(update_fields=['quantity', 'line_total', 'updated_at'])
             else:
-                # Create new item order with current food item price
-                food_item = FoodItem.objects.get(id=item_id)
+                # Look up the FoodItem from the pre-fetched map
+                food_item = new_food_items_map[item_id]
                 unit_price = food_item.price
                 line_total = quantity * unit_price
 
