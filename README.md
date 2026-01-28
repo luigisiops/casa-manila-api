@@ -12,7 +12,7 @@ A Django REST Framework API for managing casa manila food orders with PostgreSQL
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/luigisiops/casa-manila-api.git
-cd casa-manila-api/casa_manila_api
+cd casa-manila-api
 ```
 
 ### 2. Create environment file
@@ -110,11 +110,18 @@ casa-manila-api/
 │   ├── urls.py             # Main URL routes
 │   ├── wsgi.py
 │   └── asgi.py
-├── menu/              # Django app
+├── food_item/              # Food items Django app
 │   ├── models.py           # Database models
 │   ├── views.py            # API views
 │   ├── serializers.py      # DRF serializers
-│   └── ...
+│   └── migrations/
+├── order/                  # Orders Django app
+│   ├── models.py           # Database models
+│   ├── views.py            # API views
+│   ├── serializers.py      # DRF serializers
+│   ├── services.py         # Business logic
+│   ├── migrations/
+│   └── tests/
 ├── manage.py               # Django management script
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile              # Docker configuration
@@ -206,13 +213,13 @@ docker compose up -d
 
 To run all tests
 ```bash
-docker compose exec django python manage.py test menu
+docker compose exec django python manage.py test
 ```
 
 To run specific tests
 ```bash
-docker compose exec django python manage.py test menu.tests.FoodItemViewSetTestCase
-docker compose exec django python manage.py test menu.tests.OrderViewSetTestCase
+docker compose exec django python manage.py test food_item.tests
+docker compose exec django python manage.py test order.tests
 ```
 
 The tests cover:
