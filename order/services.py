@@ -173,39 +173,6 @@ def create_order_with_items(data: dict) -> Order:
     return order
 
 
-def recalculate_order_subtotal(order: Order) -> None:
-    """
-    Recalculate and persist the order's subtotal based on all active item orders.
-    
-    This function acquires a row-level lock on the order to ensure consistency
-    in concurrent scenarios.
-    
-    Args:
-        order: The order instance to recalculate subtotal for.
-    
-    Raises:
-        ValueError: If the order status is COMPLETED.
-    """
-    with transaction.atomic():
-        # Lock the order to prevent concurrent modifications
-        locked_order = Order.objects.select_for_update().get(pk=order.pk)
-
-        # Prevent recalculation for completed orders
-        if locked_order.status == 'COMPLETED':
-            raise ValueError("Cannot modify a completed order")
-
-        # Sum up line totals from all active item orders
-        subtotal = sum(
-            item.line_total for item in locked_order.item_orders.filter(is_active=True)
-        )
-
-        locked_order.subtotal = subtotal
-        locked_order.save(update_fields=['subtotal'])
-
-        # Update the original order instance to reflect changes
-        order.subtotal = subtotal
-
-
 def add_or_update_order_items(order: Order, items_data: list[dict]) -> None:
     """
     Add or update item orders for an existing order, maintaining transactional integrity.
