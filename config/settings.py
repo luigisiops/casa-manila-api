@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'menu',
+    'food_item',
+    'orders',
 ]
 
 REST_FRAMEWORK = {

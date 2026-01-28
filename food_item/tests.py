@@ -6,7 +6,8 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from menu.models import FoodItem, Order, ItemOrder
+from food_item.models import FoodItem
+from orders.models import Order, ItemOrder
 
 
 class FoodItemViewSetTestCase(TestCase):

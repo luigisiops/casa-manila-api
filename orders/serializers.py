@@ -1,11 +1,7 @@
 from rest_framework import serializers
-from menu.models import FoodItem, Order, ItemOrder
+from orders.models import Order, ItemOrder
+from food_item.serializers import FoodItemSerializer
 
-class FoodItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FoodItem
-        fields = ['id', 'name', 'price', 'size', 'category', 'is_active']
-        read_only_fields = ['id', 'is_active']
 
 class ItemOrderSerializer(serializers.ModelSerializer):
     food_item = FoodItemSerializer(source='item', read_only=True)
@@ -15,9 +11,11 @@ class ItemOrderSerializer(serializers.ModelSerializer):
         fields = ['id', 'order', 'food_item', 'item', 'quantity', 'line_total', 'is_active']
         read_only_fields = ['id', 'order', 'line_total']
 
+
 class OrderItemInputSerializer(serializers.Serializer):
     item = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=1)
+
 
 class OrderSerializer(serializers.ModelSerializer):
     item_orders = ItemOrderSerializer(many=True, read_only=True)
