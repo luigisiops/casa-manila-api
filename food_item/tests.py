@@ -6,12 +6,12 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from food_item.models import FoodItem
-from orders.models import Order
+from order.models import Order
 
 
 class FoodItemViewSetTestCase(TestCase):
     def setUp(self):
-        from orders.services import create_item_order
+        from order.services import create_item_order
         
         self.client = APIClient()
         self.active_item_1 = FoodItem.objects.create(

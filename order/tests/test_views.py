@@ -7,8 +7,8 @@ from rest_framework.test import APIClient
 from rest_framework import status
 
 from food_item.models import FoodItem
-from orders.models import Order
-from orders.services import create_item_order
+from order.models import Order
+from order.services import create_item_order
 
 
 class ItemOrderViewSetTestCase(TestCase):
