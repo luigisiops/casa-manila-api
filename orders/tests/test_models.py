@@ -4,6 +4,8 @@ from django.utils import timezone
 
 from food_item.models import FoodItem
 from orders.models import Order
+from orders.services import create_item_order, update_item_order, delete_item_order
+
 
 
 class ItemOrderModelTestCase(TestCase):
@@ -23,7 +25,6 @@ class ItemOrderModelTestCase(TestCase):
 
     def test_line_total_calculation_on_save(self):
         """ItemOrder should calculate line_total automatically via service."""
-        from orders.services import create_item_order
 
         item_order = create_item_order(
             order=self.order,
@@ -35,7 +36,6 @@ class ItemOrderModelTestCase(TestCase):
 
     def test_unit_price_locked_at_creation(self):
         """ItemOrder should capture the FoodItem.price at creation and never update it."""
-        from orders.services import create_item_order
 
         item = FoodItem.objects.create(
             name="Lock Test Item",
@@ -71,7 +71,6 @@ class ItemOrderModelTestCase(TestCase):
 
     def test_cannot_modify_itemorder_for_completed_order(self):
         """ItemOrder cannot be modified if its order status is COMPLETED."""
-        from orders.services import create_item_order, update_item_order
 
         item = FoodItem.objects.create(
             name="Test Item",
@@ -103,7 +102,6 @@ class ItemOrderModelTestCase(TestCase):
 
     def test_cannot_create_itemorder_for_completed_order(self):
         """Cannot create a new ItemOrder for an already-completed order."""
-        from orders.services import create_item_order
 
         item = FoodItem.objects.create(
             name="Test Item",
@@ -132,7 +130,6 @@ class ItemOrderModelTestCase(TestCase):
 class OrderModelTestCase(TestCase):
     def test_subtotal_calculation(self):
         """Order should calculate subtotal from all related item orders."""
-        from orders.services import create_item_order
 
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -157,7 +154,6 @@ class OrderModelTestCase(TestCase):
 
     def test_itemorder_save_updates_order_subtotal(self):
         """Creating or updating an ItemOrder should automatically update the Order subtotal."""
-        from orders.services import create_item_order, update_item_order
 
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -183,7 +179,6 @@ class OrderModelTestCase(TestCase):
 
     def test_itemorder_delete_updates_order_subtotal(self):
         """Deleting an ItemOrder should automatically update the Order subtotal."""
-        from orders.services import create_item_order, delete_item_order
 
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -215,7 +210,6 @@ class OrderModelTestCase(TestCase):
         Creating an ItemOrder should capture the FoodItem price at that moment (locked).
         Subsequent FoodItem price changes should not affect the ItemOrder unit_price.
         """
-        from orders.services import create_item_order
 
         item = FoodItem.objects.create(
             name="Test Item", price=Decimal("10.00"), size="Regular"

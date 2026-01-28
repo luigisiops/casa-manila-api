@@ -8,6 +8,7 @@ from rest_framework import status
 
 from food_item.models import FoodItem
 from orders.models import Order
+from orders.services import create_item_order
 
 
 class ItemOrderViewSetTestCase(TestCase):
@@ -89,7 +90,6 @@ class OrderViewSetTestCase(TestCase):
 
     def test_order_destroy_archives_order_and_items(self):
         """DELETE should archive order and all related item orders."""
-        from orders.services import create_item_order
         
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -222,7 +222,6 @@ class OrderViewSetTestCase(TestCase):
 
     def test_full_update_order(self):
         """Full update (PUT) of an Order should update all fields."""
-        from orders.services import create_item_order
         
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -284,7 +283,6 @@ class OrderViewSetTestCase(TestCase):
 
     def test_update_order_with_item_list_recalculates_subtotal(self):
         """Updating an order's items should recalculate the subtotal."""
-        from orders.services import create_item_order
         
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
@@ -320,7 +318,6 @@ class OrderViewSetTestCase(TestCase):
 
     def test_removing_items_from_order_updates_subtotal(self):
         """Removing an item from an order should update the subtotal."""
-        from orders.services import create_item_order
         
         order = Order.objects.create(
             pickup_datetime=timezone.now(),
