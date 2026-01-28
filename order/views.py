@@ -36,14 +36,14 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        """Allow filtering by pickup date/phone/email; default to non-cancelled orders only."""
+        """Allow filtering by pickup date/phone/email; default to active orders only."""
         qs = super().get_queryset()
         params = self.request.query_params
 
-        # Default to non-cancelled orders unless explicitly requested otherwise
-        include_cancelled = params.get("include_cancelled")
-        include_cancelled = str(include_cancelled).lower() in {"1", "true", "yes"}
-        if not include_cancelled:
+        # Default to active orders unless explicitly requested otherwise
+        include_inactive = params.get("include_inactive")
+        include_inactive = str(include_inactive).lower() in {"1", "true", "yes"}
+        if not include_inactive:
             qs = qs.exclude(status='CANCELLED')
 
         pickup_date = params.get("pickup_date")
