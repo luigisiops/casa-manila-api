@@ -12,7 +12,7 @@ A Django REST Framework API for managing casa manila food orders with PostgreSQL
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/luigisiops/casa-manila-api.git
-cd casa-manila-api/casa_manila_api
+cd casa-manila-api
 ```
 
 ### 2. Create environment file
@@ -110,11 +110,18 @@ casa-manila-api/
 │   ├── urls.py             # Main URL routes
 │   ├── wsgi.py
 │   └── asgi.py
-├── food_item/              # Django app
+├── food_item/              # Food items Django app
 │   ├── models.py           # Database models
 │   ├── views.py            # API views
 │   ├── serializers.py      # DRF serializers
-│   └── ...
+│   └── migrations/
+├── order/                  # Orders Django app
+│   ├── models.py           # Database models
+│   ├── views.py            # API views
+│   ├── serializers.py      # DRF serializers
+│   ├── services.py         # Business logic
+│   ├── migrations/
+│   └── tests/
 ├── manage.py               # Django management script
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile              # Docker configuration
@@ -133,6 +140,65 @@ casa-manila-api/
 - `PUT /api/food-items/{id}/` - Update a food item
 - `DELETE /api/food-items/{id}/` - Archive a food item (soft delete, sets is_active=False)
 
+### Item Orders
+- `GET /api/item-orders/` - List all item orders
+- `GET /api/item-orders/{id}/` - Get a specific item order
+
+**Note**: Item orders can only be created through the Orders endpoint. They cannot be created directly.
+
+### Orders
+- `GET /api/orders/` - List all orders
+- `POST /api/orders/` - Create a new order with nested item orders
+- `GET /api/orders/{id}/` - Get a specific order
+- `PUT/PATCH /api/orders/{id}/` - Update an order and/or modify items
+- `DELETE /api/orders/{id}/` - Archive an order (soft delete, sets is_active=False)
+
+#### Query Parameters
+- `pickup_date` - Filter orders by pickup date (format: YYYY-MM-DD)
+- `phone_number` - Filter orders by phone number
+- `email` - Filter orders by email
+- `search` - Combined search for phone number and email. Gives precedence to phone numbers (e.g., "0917+jane@email.com")
+
+#### Creating an Order with Items
+```json
+{
+  "pickup_datetime": "2026-01-15T14:30:00Z",
+  "customer_name": "John Doe",
+  "email": "john@example.com",
+  "phone_number": "555-1234",
+  "store_id": "location-1",
+  "items": [
+    {
+      "item": 1,
+      "quantity": 2
+    },
+    {
+      "item": 3,
+      "quantity": 1
+    }
+  ]
+}
+```
+
+#### Updating Order Items
+Use PATCH or PUT to update an order's items. The subtotal is automatically recalculated:
+```json
+{
+  "items": [
+    {
+      "item": 1,
+      "quantity": 3
+    },
+    {
+      "item": 2,
+      "quantity": 1
+    }
+  ]
+}
+```
+
+**Note**: When updating with the `items` field, only the items you include will remain on the order. Items not in the list will be removed. To remove a specific item, omit it from the items list.
+
 ## Development
 
 ### Adding new dependencies
@@ -144,9 +210,29 @@ docker compose up -d
 ```
 
 ### Running tests
+
+To run all tests
 ```bash
 docker compose exec django python manage.py test
 ```
+
+To run specific tests
+```bash
+docker compose exec django python manage.py test food_item.tests
+docker compose exec django python manage.py test order.tests
+```
+
+The tests cover:
+- Active/inactive filtering for FoodItems
+- Soft delete behavior
+- ItemOrder read-only enforcement
+- Order creation with items and subtotal calculation
+- Order item updates and quantity modifications
+- Removing items from orders
+- Order deletion cascading to ItemOrders
+- Search filtering by date and phone
+- Model-level line_total and subtotal calculations
+- Automatic subtotal recalculation on item changes
 
 ## Environment Variables
 
