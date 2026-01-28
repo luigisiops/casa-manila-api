@@ -56,7 +56,9 @@ def create_item_order(
         )
 
         # Recalculate order subtotal
-        locked_order.subtotal = sum(io.line_total for io in locked_order.item_orders.all())
+        locked_order.subtotal = sum(
+            io.line_total for io in locked_order.item_orders.filter(is_active=True)
+        )
         locked_order.save(update_fields=['subtotal'])
 
         # Update the original order instance
@@ -95,7 +97,9 @@ def update_item_order(item_order: ItemOrder, quantity: int = None) -> ItemOrder:
         item_order.save(update_fields=['quantity', 'line_total', 'updated_at'])
 
         # Recalculate order subtotal
-        locked_order.subtotal = sum(io.line_total for io in locked_order.item_orders.all())
+        locked_order.subtotal = sum(
+            io.line_total for io in locked_order.item_orders.filter(is_active=True)
+        )
         locked_order.save(update_fields=['subtotal'])
 
         return item_order
@@ -120,7 +124,9 @@ def delete_item_order(item_order: ItemOrder) -> None:
         item_order.delete()
 
         # Recalculate order subtotal after deletion
-        order.subtotal = sum(io.line_total for io in order.item_orders.all())
+        order.subtotal = sum(
+            io.line_total for io in order.item_orders.filter(is_active=True)
+        )
         order.save(update_fields=['subtotal'])
 
 
@@ -171,7 +177,9 @@ def create_order_with_items(data: dict) -> Order:
             )
 
         # Calculate subtotal from all item orders
-        order.subtotal = sum(io.line_total for io in order.item_orders.all())
+        order.subtotal = sum(
+            io.line_total for io in order.item_orders.filter(is_active=True)
+        )
         order.save(update_fields=['subtotal'])
 
     return order
@@ -253,6 +261,8 @@ def add_or_update_order_items(order: Order, items_data: list[dict]) -> None:
                 item_order.delete()
 
         # Recalculate subtotal after all item changes
-        locked_order.subtotal = sum(io.line_total for io in locked_order.item_orders.all())
+        locked_order.subtotal = sum(
+            io.line_total for io in locked_order.item_orders.filter(is_active=True)
+        )
         locked_order.save(update_fields=['subtotal'])
         order.subtotal = locked_order.subtotal
