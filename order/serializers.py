@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from order.models import Order, ItemOrder
 from order.services import create_order_with_items, add_or_update_order_items
@@ -40,16 +41,17 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """Update an order using the service layer for item management."""
-        items_data = validated_data.pop('items', None)
+        with transaction.atomic():
+            items_data = validated_data.pop('items', None)
 
-        # Update order fields directly
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+            # Update order fields directly
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        # If items were provided, update them using the service
-        if items_data is not None:
-            add_or_update_order_items(instance, items_data)
-            instance.refresh_from_db()
+            # If items were provided, update them using the service
+            if items_data is not None:
+                add_or_update_order_items(instance, items_data)
+                instance.refresh_from_db()
 
-        return instance
+            return instance
