@@ -112,8 +112,9 @@ class FoodItemViewSetTestCase(TestCase):
         self.assertEqual(self.active_item_1.price, Decimal("10.00"))
         self.assertEqual(self.active_item_1.size, "Regular")
 
-    def test_price_update_updates_related_orders(self):
-        """Updating FoodItem price should update all related item orders and order subtotals."""
+    def test_price_update_does_not_affect_existing_orders(self):
+        """Updating FoodItem price should NOT update existing item orders 
+        (prices locked at order time)."""
         # Setup: Verify initial state
         self.item_order.refresh_from_db()
         self.order.refresh_from_db()
@@ -122,6 +123,7 @@ class FoodItemViewSetTestCase(TestCase):
 
         self.assertEqual(initial_line_total, Decimal("20.00"))  # 10.00 * 2
         self.assertEqual(initial_subtotal, Decimal("20.00"))
+        self.assertEqual(self.item_order.unit_price, Decimal("10.00"))
 
         # Update the price via API
         url = reverse("fooditem-detail", args=[self.active_item_1.id])
@@ -133,11 +135,12 @@ class FoodItemViewSetTestCase(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Verify that item order line total and order subtotal were updated
+        # Verify that item order line total and order subtotal are NOT changed
         self.item_order.refresh_from_db()
         self.order.refresh_from_db()
-        self.assertEqual(self.item_order.line_total, Decimal("30.00"))  # 15.00 * 2
-        self.assertEqual(self.order.subtotal, Decimal("30.00"))
+        self.assertEqual(self.item_order.line_total, Decimal("20.00"))  # Still 10.00 * 2
+        self.assertEqual(self.item_order.unit_price, Decimal("10.00"))  # Unit price locked
+        self.assertEqual(self.order.subtotal, Decimal("20.00"))  # Subtotal unchanged
 
 
 class ItemOrderViewSetTestCase(TestCase):
@@ -509,6 +512,96 @@ class ItemOrderModelTestCase(TestCase):
 
         self.assertEqual(item_order.line_total, Decimal("45.00"))
 
+    def test_unit_price_locked_at_creation(self):
+        """ItemOrder should capture the FoodItem.price at creation and never update it."""
+        item = FoodItem.objects.create(
+            name="Lock Test Item",
+            price=Decimal("10.00"),
+            size="Regular"
+        )
+        order = Order.objects.create(
+            pickup_datetime=timezone.now(),
+            customer_name="Test User",
+            phone_number="09171234567",
+            store_id="main"
+        )
+
+        # Create ItemOrder at price 10.00
+        item_order = ItemOrder.objects.create(
+            order=order,
+            item=item,
+            quantity=2
+        )
+
+        # Verify unit_price was captured
+        self.assertEqual(item_order.unit_price, Decimal("10.00"))
+        self.assertEqual(item_order.line_total, Decimal("20.00"))
+
+        # Change the FoodItem price
+        item.price = Decimal("25.00")
+        item.save()
+
+        # Verify unit_price is still locked
+        item_order.refresh_from_db()
+        self.assertEqual(item_order.unit_price, Decimal("10.00"))
+        self.assertEqual(item_order.line_total, Decimal("20.00"))
+
+    def test_cannot_modify_itemorder_for_completed_order(self):
+        """ItemOrder cannot be modified if its order status is COMPLETED."""
+        item = FoodItem.objects.create(
+            name="Test Item",
+            price=Decimal("10.00"),
+            size="Regular"
+        )
+        order = Order.objects.create(
+            pickup_datetime=timezone.now(),
+            customer_name="Test User",
+            phone_number="09171234567",
+            store_id="main"
+        )
+        # Create ItemOrder while order is still PLACED
+        item_order = ItemOrder.objects.create(
+            order=order,
+            item=item,
+            quantity=1
+        )
+
+        # Mark the order as COMPLETED
+        order.status = 'COMPLETED'
+        order.save()
+
+        # Try to modify quantity on the completed order
+        item_order.quantity = 2
+        with self.assertRaises(ValueError) as context:
+            item_order.save()
+        
+        self.assertIn("Cannot modify ItemOrder for a completed order", str(context.exception))
+
+    def test_cannot_create_itemorder_for_completed_order(self):
+        """Cannot create a new ItemOrder for an already-completed order."""
+        item = FoodItem.objects.create(
+            name="Test Item",
+            price=Decimal("10.00"),
+            size="Regular"
+        )
+        order = Order.objects.create(
+            pickup_datetime=timezone.now(),
+            customer_name="Test User",
+            phone_number="09171234567",
+            store_id="main",
+            status="COMPLETED"
+        )
+
+        # Try to create ItemOrder on completed order
+        with self.assertRaises(ValueError) as context:
+            ItemOrder.objects.create(
+                order=order,
+                item=item,
+                quantity=1
+            )
+        
+        self.assertIn("Cannot modify ItemOrder for a completed order", str(context.exception))
+
 
 class OrderModelTestCase(TestCase):
     def test_subtotal_calculation(self):
@@ -589,10 +682,10 @@ class OrderModelTestCase(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.subtotal, Decimal("15.00"))  # Only item2 remains
 
-    def test_fooditem_price_update_cascades_to_orders(self):
+    def test_itemorder_unit_price_locked_at_creation(self):
         """
-        Updating a FoodItem price should update all related ItemOrder line_totals and
-        Order subtotals.
+        Creating an ItemOrder should capture the FoodItem price at that moment (locked).
+        Subsequent FoodItem price changes should not affect the ItemOrder unit_price.
         """
         item = FoodItem.objects.create(
             name="Test Item", price=Decimal("10.00"), size="Regular"
@@ -611,26 +704,49 @@ class OrderModelTestCase(TestCase):
             store_id="main"
         )
 
+        # Create first item order at price 10.00
         item_order_1 = ItemOrder.objects.create(order=order1, item=item, quantity=2)
-        item_order_2 = ItemOrder.objects.create(order=order2, item=item, quantity=3)
+        self.assertEqual(item_order_1.unit_price, Decimal("10.00"))
+        self.assertEqual(item_order_1.line_total, Decimal("20.00"))
 
-        order1.refresh_from_db()
-        order2.refresh_from_db()
-        self.assertEqual(order1.subtotal, Decimal("20.00"))
-        self.assertEqual(order2.subtotal, Decimal("30.00"))
-
-        # Update the food item price
+        # Update the food item price to 15.00
         item.price = Decimal("15.00")
         item.save()
 
-        # Verify ItemOrder line_totals updated
+        # Create second item order at new price 15.00
+        item_order_2 = ItemOrder.objects.create(order=order2, item=item, quantity=3)
+        self.assertEqual(item_order_2.unit_price, Decimal("15.00"))
+        self.assertEqual(item_order_2.line_total, Decimal("45.00"))
+        # Verify first item order unit_price was NOT changed (still locked at 10.00)
         item_order_1.refresh_from_db()
-        item_order_2.refresh_from_db()
-        self.assertEqual(item_order_1.line_total, Decimal("30.00"))  # 15 * 2
-        self.assertEqual(item_order_2.line_total, Decimal("45.00"))  # 15 * 3
+        self.assertEqual(item_order_1.unit_price, Decimal("10.00"))
+        self.assertEqual(item_order_1.line_total, Decimal("20.00"))
 
-        # Verify Order subtotals updated
+        # Verify order subtotals reflect the locked prices
         order1.refresh_from_db()
         order2.refresh_from_db()
-        self.assertEqual(order1.subtotal, Decimal("30.00"))
+        self.assertEqual(order1.subtotal, Decimal("20.00"))
         self.assertEqual(order2.subtotal, Decimal("45.00"))
+
+    def test_cannot_modify_subtotal_of_completed_order(self):
+        """Completed orders should have frozen subtotals that cannot be changed."""
+        item = FoodItem.objects.create(
+            name="Test Item",
+            price=Decimal("10.00"),
+            size="Regular"
+        )
+        order = Order.objects.create(
+            pickup_datetime=timezone.now(),
+            customer_name="Test User",
+            phone_number="09171234567",
+            store_id="main",
+            status="COMPLETED",
+            subtotal=Decimal("50.00")
+        )
+
+        # Try to change subtotal on completed order
+        order.subtotal = Decimal("60.00")
+        with self.assertRaises(ValueError) as context:
+            order.save()
+
+        self.assertIn("Cannot modify subtotal of a completed order", str(context.exception))
