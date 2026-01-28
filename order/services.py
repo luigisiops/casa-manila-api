@@ -15,7 +15,7 @@ def create_item_order(
     Create a new ItemOrder with proper price locking and subtotal updates.
     
     This function encapsulates all the business logic for creating an ItemOrder:
-    - Validates that the order is not COMPLETED
+    - Validates that the order is not COMPLETED or CANCELLED
     - Locks the price at creation time from FoodItem if not provided
     - Calculates line_total automatically
     - Updates the order subtotal atomically
@@ -30,14 +30,14 @@ def create_item_order(
         ItemOrder: The created item order.
     
     Raises:
-        ValueError: If the order status is COMPLETED.
+        ValueError: If the order status is COMPLETED or CANCELLED.
     """
     with transaction.atomic():
         # Lock the order to prevent concurrent modifications
         locked_order = Order.objects.select_for_update().get(pk=order.pk)
 
-        if locked_order.status == 'COMPLETED':
-            raise ValueError("Cannot add items to a completed order")
+        if locked_order.status in ('COMPLETED', 'CANCELLED'):
+            raise ValueError(f"Cannot add items to a {locked_order.status.lower()} order")
 
         # Capture current price if not provided
         if unit_price is None:
@@ -77,14 +77,14 @@ def update_item_order(item_order: ItemOrder, quantity: int = None) -> ItemOrder:
         ItemOrder: The updated item order.
     
     Raises:
-        ValueError: If the order status is COMPLETED.
+        ValueError: If the order status is COMPLETED or CANCELLED.
     """
     with transaction.atomic():
         # Lock the order to prevent concurrent modifications
         locked_order = Order.objects.select_for_update().get(pk=item_order.order.pk)
 
-        if locked_order.status == 'COMPLETED':
-            raise ValueError("Cannot modify ItemOrder for a completed order")
+        if locked_order.status in ('COMPLETED', 'CANCELLED'):
+            raise ValueError(f"Cannot modify ItemOrder for a {locked_order.status.lower()} order")
 
         # Update quantity if provided
         if quantity is not None:
@@ -109,13 +109,13 @@ def delete_item_order(item_order: ItemOrder) -> None:
         item_order: The ItemOrder to delete.
     
     Raises:
-        ValueError: If the order status is COMPLETED.
+        ValueError: If the order status is COMPLETED or CANCELLED.
     """
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=item_order.order.pk)
 
-        if order.status == 'COMPLETED':
-            raise ValueError("Cannot delete ItemOrder for a completed order")
+        if order.status in ('COMPLETED', 'CANCELLED'):
+            raise ValueError(f"Cannot delete ItemOrder for a {order.status.lower()} order")
 
         item_order.delete()
 
@@ -189,16 +189,16 @@ def add_or_update_order_items(order: Order, items_data: list[dict]) -> None:
                    [{'item': <FoodItem id>, 'quantity': <int>}, ...]
     
     Raises:
-        ValueError: If the order status is COMPLETED.
+        ValueError: If the order status is COMPLETED or CANCELLED.
         FoodItem.DoesNotExist: If any item ID doesn't exist.
     """
     with transaction.atomic():
         # Lock the order to prevent concurrent modifications
         locked_order = Order.objects.select_for_update().get(pk=order.pk)
 
-        # Prevent modifications to completed orders
-        if locked_order.status == 'COMPLETED':
-            raise ValueError("Cannot modify items for a completed order")
+        # Prevent modifications to completed or cancelled orders
+        if locked_order.status in ('COMPLETED', 'CANCELLED'):
+            raise ValueError(f"Cannot modify items for a {locked_order.status.lower()} order")
 
         # Build a map of existing item orders by food item ID
         existing_item_orders = {
