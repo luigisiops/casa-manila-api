@@ -145,6 +145,8 @@ def create_order_with_items(data: dict) -> Order:
         FoodItem.DoesNotExist: If any item ID in the items list doesn't exist.
         ValueError: If quantity is invalid or order data is incomplete.
     """
+    # Create a shallow copy to avoid mutating the input dictionary
+    data = data.copy()
     items_data = data.pop('items', [])
 
     with transaction.atomic():
