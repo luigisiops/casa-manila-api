@@ -30,10 +30,13 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         # Prevent direct subtotal modification of completed orders
         if self.pk:
-            existing = Order.objects.get(pk=self.pk)
-            if existing.status == 'COMPLETED' and self.status == 'COMPLETED':
-                if existing.subtotal != self.subtotal:
-                    raise ValueError("Cannot modify subtotal of a completed order")
+            update_fields = kwargs.get('update_fields')
+            # Only check if we're potentially updating subtotal or status
+            if update_fields is None or 'subtotal' in update_fields or 'status' in update_fields:
+                existing = Order.objects.get(pk=self.pk)
+                if existing.status == 'COMPLETED' and self.status == 'COMPLETED':
+                    if existing.subtotal != self.subtotal:
+                        raise ValueError("Cannot modify subtotal of a completed order")
 
         super().save(*args, **kwargs)
 
