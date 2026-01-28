@@ -237,7 +237,7 @@ class OrderViewSetTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
         item_order.refresh_from_db()
-        self.assertFalse(order.is_active)
+        self.assertEqual(order.status, 'CANCELLED')
         self.assertFalse(item_order.is_active)
 
     def test_order_search_by_phone_and_email(self):

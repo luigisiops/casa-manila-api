@@ -10,8 +10,8 @@ class ItemOrderInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer_name', 'phone_number', 'pickup_datetime', 'subtotal', 'is_completed', 'is_active']
-    list_filter = ['is_completed', 'is_active', 'store_id', 'pickup_datetime']
+    list_display = ['id', 'customer_name', 'phone_number', 'pickup_datetime', 'subtotal', 'status']
+    list_filter = ['status', 'store_id', 'pickup_datetime']
     search_fields = ['customer_name', 'phone_number', 'email']
     readonly_fields = ['subtotal', 'created_at', 'updated_at']
     inlines = [ItemOrderInline]

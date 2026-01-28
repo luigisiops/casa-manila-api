@@ -26,10 +26,10 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = [
             'id', 'pickup_datetime', 'customer_name', 'email', 'phone_number',
-            'subtotal', 'store_id', 'is_completed', 'is_active',
+            'subtotal', 'store_id', 'status',
             'item_orders', 'items'
         ]
-        read_only_fields = ['id', 'subtotal', 'is_active']
+        read_only_fields = ['id', 'subtotal', 'status']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])

@@ -4,15 +4,26 @@ from food_item.models import FoodItem
 
 
 class Order(models.Model):
+    STATUS_CHOICES = [
+        ('PLACED', 'Placed'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('READY', 'Ready'),
+        ('COMPLETED', 'Completed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
     pickup_datetime = models.DateTimeField(null=False, blank=False, db_index=True)
     customer_name = models.CharField(max_length=50, null=False, blank=False)
     email = models.CharField(max_length=50, blank=True, null=True)
     phone_number = models.CharField(max_length=15)
     subtotal = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     store_id = models.CharField(max_length=20, help_text="One of two possible locations")
-    # TODO: add Status ENUM with (Active, Completed, Cancelled)
-    is_completed = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PLACED',
+        db_index=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
