@@ -145,13 +145,17 @@ def create_order_with_items(data: dict) -> Order:
         # Create the order with provided data
         order = Order.objects.create(**data)
 
+        # Fetch all food items in a single query to avoid N+1 problem
+        item_ids = [item_data['item'] for item_data in items_data]
+        food_items_map = FoodItem.objects.in_bulk(item_ids)
+
         # Create all item orders using the service function
         for item_data in items_data:
             item_id = item_data['item']
             quantity = item_data['quantity']
 
-            # Fetch the FoodItem to get current price
-            food_item = FoodItem.objects.get(id=item_id)
+            # Look up the FoodItem from the pre-fetched map
+            food_item = food_items_map[item_id]
 
             # Use create_item_order service (without transaction since we're already in one)
             # Manually create to avoid nested transaction issues
